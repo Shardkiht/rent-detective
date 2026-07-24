@@ -1,4 +1,4 @@
-package io.github.shardkiht.rentdetective.eval;
+package io.github.shardkiht.rentdetective.app.eval;
 
 public interface EvalStrategy {
 

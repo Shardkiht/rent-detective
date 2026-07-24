@@ -1,7 +1,7 @@
 package io.github.shardkiht.rentdetective.app.service;
 
-import io.github.shardkiht.rentdetective.eval.EvalRunner;
-import io.github.shardkiht.rentdetective.eval.report.EvalReport;
+import io.github.shardkiht.rentdetective.app.eval.EvalRunner;
+import io.github.shardkiht.rentdetective.app.eval.report.EvalReport;
 import org.springframework.stereotype.Service;
 
 @Service

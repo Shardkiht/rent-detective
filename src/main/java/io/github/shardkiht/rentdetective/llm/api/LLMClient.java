@@ -1,4 +1,7 @@
-package io.github.shardkiht.rentdetective.llm;
+package io.github.shardkiht.rentdetective.llm.api;
+
+import io.github.shardkiht.rentdetective.llm.ChatRequest;
+import io.github.shardkiht.rentdetective.llm.ChatResponse;
 
 public interface LLMClient {
 

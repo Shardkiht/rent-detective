@@ -1,6 +1,6 @@
 package io.github.shardkiht.rentdetective.rag;
 
-import io.github.shardkiht.rentdetective.llm.EmbeddingClient;
+import io.github.shardkiht.rentdetective.llm.api.EmbeddingClient;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

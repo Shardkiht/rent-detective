@@ -1,4 +1,4 @@
-package io.github.shardkiht.rentdetective.llm;
+package io.github.shardkiht.rentdetective.llm.api;
 
 public interface StreamCallback {
 

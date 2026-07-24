@@ -5,10 +5,7 @@ target/
 .kotlin
 
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -37,3 +34,9 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Log Files ###
+
+### Local Config ###
+**/src/main/resources/application-dev.yml
+**/src/test/resources/application-dev.yml

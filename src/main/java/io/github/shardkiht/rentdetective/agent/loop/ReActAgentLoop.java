@@ -4,7 +4,7 @@ import io.github.shardkiht.rentdetective.agent.report.EvidenceChainReport;
 import io.github.shardkiht.rentdetective.agent.tool.ToolRegistry;
 import io.github.shardkiht.rentdetective.llm.ChatRequest;
 import io.github.shardkiht.rentdetective.llm.ChatResponse;
-import io.github.shardkiht.rentdetective.llm.LLMClient;
+import io.github.shardkiht.rentdetective.llm.api.LLMClient;
 import org.springframework.stereotype.Component;
 
 @Component

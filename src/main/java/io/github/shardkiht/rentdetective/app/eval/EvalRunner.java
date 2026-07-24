@@ -1,6 +1,6 @@
-package io.github.shardkiht.rentdetective.eval;
+package io.github.shardkiht.rentdetective.app.eval;
 
-import io.github.shardkiht.rentdetective.eval.report.EvalReport;
+import io.github.shardkiht.rentdetective.app.eval.report.EvalReport;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

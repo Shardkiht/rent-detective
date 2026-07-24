@@ -1,4 +1,4 @@
-package io.github.shardkiht.rentdetective.eval.report;
+package io.github.shardkiht.rentdetective.app.eval.report;
 
 import java.util.List;
 

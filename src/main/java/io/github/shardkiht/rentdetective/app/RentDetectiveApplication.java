@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "io.github.shardkiht.rentdetective")
 @EnableAsync
 @MapperScan("io.github.shardkiht.rentdetective.**.mapper")
 public class RentDetectiveApplication {

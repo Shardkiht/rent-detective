@@ -1,4 +1,4 @@
-package io.github.shardkiht.rentdetective.eval.entity;
+package io.github.shardkiht.rentdetective.app.eval.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
