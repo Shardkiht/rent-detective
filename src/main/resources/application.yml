@@ -1,0 +1,36 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: rentdetective
+  datasource:
+    url: jdbc:mysql://localhost:3306/rentdetective?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: ""
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    host: localhost
+    port: 6379
+    password: ""
+    database: 0
+  threads:
+    virtual:
+      enabled: true
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: io.github.shardkiht.rentdetective.**.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+rentdetective:
+  llm:
+    ollama:
+      base-url: http://localhost:11434
+      model: llama3
+    openai-compatible:
+      base-url: http://localhost:8000/v1
+      api-key: ""
+      model: qwen2.5
