@@ -2,7 +2,6 @@ package io.github.shardkiht.rentdetective.llm.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.shardkiht.rentdetective.llm.*;
 import io.github.shardkiht.rentdetective.llm.api.LLMClient;
@@ -39,24 +38,8 @@ public class OllamaLLMClient implements LLMClient {
             body.put("model", model);
             body.put("stream", false);
 
-            ArrayNode messages = body.putArray("messages");
-            for (Message m : request.messages()) {
-                ObjectNode msgNode = messages.addObject();
-                msgNode.put("role", m.role());
-                msgNode.put("content", m.content());
-            }
-
-            if (!request.tools().isEmpty()) {
-                ArrayNode tools = body.putArray("tools");
-                for (ToolSchema tool : request.tools()) {
-                    ObjectNode toolNode = tools.addObject();
-                    toolNode.put("type", "function");
-                    ObjectNode function = toolNode.putObject("function");
-                    function.put("name", tool.name());
-                    function.put("description", tool.description());
-                    function.set("parameters", mapper.readTree(tool.parameters()));
-                }
-            }
+            LlmRequestUtils.appendMessages(body, request);
+            LlmRequestUtils.appendTools(body, request, mapper);
 
             body.putObject("options").put("temperature", request.temperature());
 
@@ -94,6 +77,8 @@ public class OllamaLLMClient implements LLMClient {
             }
         } catch (IOException e) {
             throw new LLMException("调用 Ollama 失败: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
