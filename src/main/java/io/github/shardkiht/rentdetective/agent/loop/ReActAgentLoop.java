@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
 
 import static io.github.shardkiht.rentdetective.agent.loop.AgentLoopConstants.*;
 
@@ -187,18 +186,45 @@ public class ReActAgentLoop {
         }
     }
 
+    /**
+     * 括号计数算法：找到第一个 { 及与之匹配的 }，避免贪婪正则把无关花括号框进来。
+     */
     private String extractJsonObject(String content) {
         if (content == null || content.isBlank()) {
             return null;
         }
         String trimmed = content.trim();
-        // 直接以 { 开头，尝试整体解析
         if (trimmed.startsWith("{")) {
             return trimmed;
         }
-        // 否则用正则提取第一个 { ... } 块
-        Matcher matcher = JSON_BLOCK_PATTERN.matcher(trimmed);
-        return matcher.find() ? matcher.group() : null;
+        int start = trimmed.indexOf('{');
+        if (start < 0) {
+            return null;
+        }
+        int depth = 0;
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = start; i < trimmed.length(); i++) {
+            char c = trimmed.charAt(i);
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (c == '\\' && inString) {
+                escaped = true;
+            } else if (c == '"') {
+                inString = !inString;
+            } else if (!inString) {
+                if (c == '{') depth++;
+                else if (c == '}') {
+                    depth--;
+                    if (depth == 0) {
+                        return trimmed.substring(start, i + 1);
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private EvidenceChainReport buildResult(EvidenceChainReport report, List<AgentStep> trace, boolean converged) {

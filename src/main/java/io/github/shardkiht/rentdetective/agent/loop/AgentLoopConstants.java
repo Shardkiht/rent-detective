@@ -1,7 +1,6 @@
 package io.github.shardkiht.rentdetective.agent.loop;
 
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * agent.loop 包常量。
@@ -17,8 +16,8 @@ public final class AgentLoopConstants {
     /** 合法结论类型 */
     public static final Set<String> VALID_VERDICTS = Set.of("SAFE", "SUSPECT", "SCAM", "INJECTION");
 
-    /** 从文本中提取第一个 JSON 对象的正则 */
-    public static final Pattern JSON_BLOCK_PATTERN = Pattern.compile("\\{[\\s\\S]*}");
+    /** 工具调用超时时间（秒） */
+    public static final int TOOL_INVOKE_TIMEOUT_SECONDS = 10;
 
     /** Agent System Prompt */
     public static final String SYSTEM_PROMPT = """

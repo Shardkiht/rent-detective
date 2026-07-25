@@ -5,12 +5,19 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
+
+import static io.github.shardkiht.rentdetective.agent.loop.AgentLoopConstants.TOOL_INVOKE_TIMEOUT_SECONDS;
 
 @Component
 public class ToolRegistry {
 
     private final Map<String, Tool> tools = new ConcurrentHashMap<>();
+    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "tool-exec");
+        t.setDaemon(true);
+        return t;
+    });
 
     public ToolRegistry(List<Tool> toolList) {
         toolList.forEach(this::register);
@@ -32,13 +39,14 @@ public class ToolRegistry {
             return ToolResult.fail("Tool not found: " + name);
         }
         try {
-            return tool.execute(argsJson);
+            return CompletableFuture.supplyAsync(() -> tool.execute(argsJson), executor)
+                    .get(TOOL_INVOKE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            return ToolResult.fail("Tool '" + name + "' 执行超时（" + TOOL_INVOKE_TIMEOUT_SECONDS + "s）");
         } catch (Exception e) {
-            return ToolResult.fail(e.getMessage());
+            Throwable cause = e instanceof ExecutionException && e.getCause() != null ? e.getCause() : e;
+            return ToolResult.fail(cause.getMessage());
         }
     }
 
-    public boolean has(String name) {
-        return tools.containsKey(name);
-    }
 }
