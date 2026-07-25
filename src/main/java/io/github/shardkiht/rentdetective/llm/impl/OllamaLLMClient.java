@@ -16,8 +16,6 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class OllamaLLMClient implements LLMClient {
 
-    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
-
     private final OkHttpClient httpClient;
     private final ObjectMapper mapper = new ObjectMapper();
     private final String baseUrl;
@@ -64,7 +62,7 @@ public class OllamaLLMClient implements LLMClient {
 
             Request httpRequest = new Request.Builder()
                     .url(baseUrl + "/api/chat")
-                    .post(RequestBody.create(mapper.writeValueAsBytes(body), JSON))
+                    .post(RequestBody.create(mapper.writeValueAsBytes(body), LlmClientConstants.JSON_MEDIA_TYPE))
                     .build();
 
             try (Response response = httpClient.newCall(httpRequest).execute()) {
@@ -78,7 +76,7 @@ public class OllamaLLMClient implements LLMClient {
                 ChatResponse.ToolCall toolCall = null;
                 boolean hasToolCall = false;
                 JsonNode toolCalls = messageNode.path("tool_calls");
-                if (toolCalls.isArray() && toolCalls.size() > 0) {
+                if (toolCalls.isArray() && !toolCalls.isEmpty()) {
                     JsonNode fn = toolCalls.get(0).path("function");
                     String argsJson = fn.path("arguments").isTextual()
                             ? fn.path("arguments").asText()

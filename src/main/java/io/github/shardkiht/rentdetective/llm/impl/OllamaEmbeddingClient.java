@@ -15,8 +15,6 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class OllamaEmbeddingClient implements EmbeddingClient {
 
-    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
-
     private final OkHttpClient httpClient;
     private final ObjectMapper mapper = new ObjectMapper();
     private final String baseUrl;
@@ -42,7 +40,7 @@ public class OllamaEmbeddingClient implements EmbeddingClient {
 
             Request request = new Request.Builder()
                     .url(baseUrl + "/api/embeddings")
-                    .post(RequestBody.create(mapper.writeValueAsBytes(body), JSON))
+                    .post(RequestBody.create(mapper.writeValueAsBytes(body), LlmClientConstants.JSON_MEDIA_TYPE))
                     .build();
 
             try (Response response = httpClient.newCall(request).execute()) {
