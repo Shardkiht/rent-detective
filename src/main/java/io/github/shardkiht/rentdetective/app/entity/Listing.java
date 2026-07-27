@@ -6,10 +6,10 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 @Data
-@TableName("listing")
+@TableName("listings")
 public class Listing {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Long id;
 
     private String source;
@@ -31,4 +31,10 @@ public class Listing {
     private String riskLevel;
 
     private String riskTags;
+
+    private String evalGroup;
+
+    private Integer multiTierPricing;
+
+    private String labelNote;
 }
