@@ -19,16 +19,23 @@ public class FallbackLLMClient implements LLMClient {
     private final LLMClient primary;
     private final LLMClient secondary;
 
-    public FallbackLLMClient(OllamaLLMClient primary, OpenAiCompatibleLLMClient secondary) {
+    public FallbackLLMClient(OpenAiCompatibleLLMClient primary, OllamaLLMClient secondary) {
         this.primary = primary;
         this.secondary = secondary;
     }
+
+    // TODO: 临时禁用本地降级，避免 GPU 满载风扇狂转。恢复时删除此标志并还原 catch 块
+    private static final boolean FALLBACK_DISABLED = true;
 
     @Override
     public ChatResponse chat(ChatRequest request) {
         try {
             return withEngineMeta(primary.chat(request), primary.engineName(), false);
         } catch (Exception primaryEx) {
+            if (FALLBACK_DISABLED) {
+                log.warn("主引擎 {} 调用失败，本地降级已禁用，直接抛出: {}", primary.engineName(), primaryEx.getMessage());
+                throw new LLMException("主引擎调用失败(降级已禁用): " + primaryEx.getMessage(), primaryEx);
+            }
             log.warn("主引擎 {} 调用失败，降级到备用引擎: {}", primary.engineName(), primaryEx.getMessage());
             try {
                 return withEngineMeta(secondary.chat(request), secondary.engineName(), true);

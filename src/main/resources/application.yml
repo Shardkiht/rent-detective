@@ -16,4 +16,4 @@ rule:
     review: 0.4
 
 rag:
-  embed-on-startup: false
+  embed-on-startup: true

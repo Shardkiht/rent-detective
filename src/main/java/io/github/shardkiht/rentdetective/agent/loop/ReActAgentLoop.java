@@ -17,7 +17,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import static io.github.shardkiht.rentdetective.agent.loop.AgentLoopConstants.*;
@@ -43,6 +45,9 @@ public class ReActAgentLoop {
         return investigate(listing, step -> {});
     }
 
+    /** 至少调用多少个不同工具后才允许给出结论 */
+    private static final int MIN_DISTINCT_TOOLS = 2;
+
     public EvidenceChainReport investigate(Listing listing, Consumer<AgentStep> onStep) {
         List<Message> messages = new ArrayList<>();
         messages.add(Message.system(SYSTEM_PROMPT));
@@ -50,6 +55,7 @@ public class ReActAgentLoop {
 
         List<AgentStep> trace = new ArrayList<>();
         List<ToolSchema> toolSchemas = toolRegistry.schemas();
+        Set<String> toolsCalled = new HashSet<>();
 
         for (int step = 1; step <= MAX_STEPS; step++) {
             ChatResponse response = callModel(messages, toolSchemas);
@@ -58,6 +64,8 @@ public class ReActAgentLoop {
                 // 记录 tool_call 轨迹
                 emitStep(onStep, trace, new AgentStep(step, "tool_call",
                         response.toolCall().name(), response.toolCall().argsJson(), now()));
+
+                toolsCalled.add(response.toolCall().name());
 
                 ToolResult toolResult = toolRegistry.invoke(
                         response.toolCall().name(), response.toolCall().argsJson());
@@ -76,10 +84,22 @@ public class ReActAgentLoop {
                         toolResult.success() ? toolResult.dataJson() : ("调用失败: " + toolResult.error())));
 
             } else {
-                // 没有工具调用，模型认为可以给结论了
+                // 没有工具调用，模型想给结论了
                 emitStep(onStep, trace, new AgentStep(step, "thought", null, response.content(), now()));
 
                 EvidenceChainReport parsed = tryParseVerdict(response.content());
+
+                // 工具调用不足时拒绝接受结论，强制模型继续调工具
+                if (parsed != null && toolsCalled.size() < MIN_DISTINCT_TOOLS) {
+                    log.info("Agent 试图在仅调用 {} 个工具后给出结论，拒绝并要求继续调查", toolsCalled.size());
+                    messages.add(Message.assistant(response.content()));
+                    messages.add(Message.user(
+                            "你目前只调用了 " + toolsCalled.size() + " 个工具（" + toolsCalled + "），证据不充分。" +
+                            "请不要编造其他工具的结果，必须实际调用至少 " + MIN_DISTINCT_TOOLS +
+                            " 个不同工具后才能给出结论。请继续调用其他工具（如 check_price_anomaly、search_similar_listings）获取更多信息。"));
+                    continue;
+                }
+
                 if (parsed != null) {
                     emitStep(onStep, trace, new AgentStep(step, "final_answer", null, response.content(), now()));
                     return buildResult(parsed, trace, true);

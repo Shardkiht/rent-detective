@@ -30,7 +30,7 @@ public class OpenAiCompatibleLLMClient implements LLMClient {
         this.model = model;
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(90, TimeUnit.SECONDS)
                 .build();
     }
 
@@ -40,6 +40,12 @@ public class OpenAiCompatibleLLMClient implements LLMClient {
             ObjectNode body = mapper.createObjectNode();
             body.put("model", model);
             body.put("temperature", request.temperature());
+
+            // DeepSeek V4 系列：关闭思考模式，节省 token
+            if (model.contains("deepseek")) {
+                ObjectNode thinking = body.putObject("thinking");
+                thinking.put("type", "disabled");
+            }
 
             LlmRequestUtils.appendMessages(body, request);
             LlmRequestUtils.appendTools(body, request, mapper);

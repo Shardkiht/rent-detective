@@ -4,27 +4,43 @@ import io.github.shardkiht.rentdetective.semantic.engine.ListingContext;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 营销大于实质检测。大篇幅描述周边生活方式/景点/心情感受，房屋本身信息占比低于 30%。
+ * 营销大于实质检测（重写版）。
+ * 触发条件：营销废话占比 > 15% 且 结构化信息（数字+单位）少于 3 处。
+ * 反转逻辑：不再试图穷举"房屋信息关键词"，而是检测纯营销话术是否过多且缺乏实质数据支撑。
  * rule_type: sales_over_substance, weight: 0.5
- * 触发案例: 15/50
- * 规则来自 104 条人工标注。
  */
 @Component
 public class SalesOverSubstanceMatcher implements RuleMatcher {
 
     private static final double WEIGHT = 0.5;
-    private static final double THRESHOLD = 0.3;
 
-    /** 房屋硬信息关键词 */
-    private static final Pattern HOUSE_INFO_PATTERN = Pattern.compile(
-            "\\d室|\\d房|\\d厅|主卧|次卧|朝向|楼层|\\d+平|\\d+㎡|面积|装修|户型|采光|通风|电梯|阳台|卫生间|厨房|客厅|卧室|家具|家电|床|衣柜|书桌|空调|洗衣机|冰箱|热水器");
+    /** 营销废话占比阈值 */
+    private static final double MARKETING_RATIO_THRESHOLD = 0.15;
 
-    /** 生活方式/营销描述关键词 */
-    private static final Pattern LIFESTYLE_PATTERN = Pattern.compile(
-            "商圈|商场|超市|医院|学校|公园|景点|地铁|公交|步行|分钟|生活圈|繁华|便利|热闹|美食|餐厅|咖啡|健身|娱乐|购物|休闲|舒适|惬意|享受|温馨|浪漫|时尚|潮流|打卡|网红|人气|口碑|推荐|必住|超值|划算|惊喜|心动");
+    /** 结构化信息最少处数（低于此值才触发） */
+    private static final int MIN_STRUCTURED_INFO = 3;
+
+    /**
+     * 纯营销/情绪话术关键词（可穷举，数量远少于"房屋信息"种类）。
+     * 不含交通/地标等中性词——那些是位置描述，不是营销。
+     */
+    private static final Pattern MARKETING_PATTERN = Pattern.compile(
+            "温馨|浪漫|舒适|惬意|享受|时尚|潮流|打卡|网红|人气|口碑|必住|超值|划算|" +
+            "惊喜|心动|不容错过|错过后悔|手慢无|抢手|火爆|热销|秒杀|限时|特价|" +
+            "拎包入住|管家式|酒店式|轻奢|高端|豪华|精装豪宅|品质生活|理想居所|" +
+            "家的感觉|如归|暖心|贴心|尊享|私密|静谧|悠然|宜居|臻品");
+
+    /**
+     * 结构化信息：数字 + 单位/量词组合。
+     * 匹配如：1580/月、6楼、8层、300M宽带、押一付三、2室1厅、89㎡、100平、4/10号线
+     */
+    private static final Pattern STRUCTURED_INFO_PATTERN = Pattern.compile(
+            "\\d+[\\d./]*\\s*(元|月|楼|层|平|㎡|m²|M|兆|室|房|厅|卫|厨|号线|号线|年|天|" +
+            "公里|km|分钟|小时|宽带|兆|G|押\\d付\\d|季付|月付|年付)");
 
     @Override
     public String ruleType() {
@@ -38,27 +54,33 @@ public class SalesOverSubstanceMatcher implements RuleMatcher {
             return Optional.empty();
         }
 
-        // 计算房屋硬信息字数
-        int houseInfoLength = 0;
-        var houseMatcher = HOUSE_INFO_PATTERN.matcher(body);
-        while (houseMatcher.find()) {
-            houseInfoLength += houseMatcher.group().length();
+        // 1. 计算营销废话字数占比
+        int marketingLength = 0;
+        Matcher mktMatcher = MARKETING_PATTERN.matcher(body);
+        while (mktMatcher.find()) {
+            marketingLength += mktMatcher.group().length();
+        }
+        double marketingRatio = (double) marketingLength / body.length();
+
+        // 营销废话占比不够高 → 不触发
+        if (marketingRatio < MARKETING_RATIO_THRESHOLD) {
+            return Optional.empty();
         }
 
-        // 计算生活方式描述字数
-        int lifestyleLength = 0;
-        var lifestyleMatcher = LIFESTYLE_PATTERN.matcher(body);
-        while (lifestyleMatcher.find()) {
-            lifestyleLength += lifestyleMatcher.group().length();
+        // 2. 计算结构化信息处数
+        int structuredCount = 0;
+        Matcher structMatcher = STRUCTURED_INFO_PATTERN.matcher(body);
+        while (structMatcher.find()) {
+            structuredCount++;
         }
 
-        // 房屋信息占比低于 30%
-        double houseRatio = (double) houseInfoLength / body.length();
-        if (houseRatio < THRESHOLD && lifestyleLength > 0) {
-            return Optional.of(new RuleHit(ruleType(), WEIGHT,
-                    String.format("房屋信息占比 %.1f%%（低于 30%%），生活描述占比过高", houseRatio * 100)));
+        // 结构化信息充足 → 有实质内容支撑，不触发
+        if (structuredCount >= MIN_STRUCTURED_INFO) {
+            return Optional.empty();
         }
 
-        return Optional.empty();
+        return Optional.of(new RuleHit(ruleType(), WEIGHT,
+                String.format("营销话术占比 %.1f%%（>15%%），结构化信息仅 %d 处（<%d），缺乏实质内容",
+                        marketingRatio * 100, structuredCount, MIN_STRUCTURED_INFO)));
     }
 }

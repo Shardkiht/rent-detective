@@ -4,6 +4,7 @@ import io.github.shardkiht.rentdetective.semantic.engine.ListingContext;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -25,6 +26,10 @@ public class PriceMenuFormatMatcher implements RuleMatcher {
     private static final Pattern MULTI_PRICE_PATTERN = Pattern.compile(
             "\\d{3,}元?.{0,5}[+＋、,，].{0,5}\\d{3,}元?.{0,5}[+＋、,，].{0,5}\\d{3,}");
 
+    /** 交通语境词：匹配到数字串前后 15 字符内出现这些词则排除 */
+    private static final Pattern TRANSPORT_CONTEXT = Pattern.compile(
+            "路|车|线|站|公交|号线|地铁|巴士| transit");
+
     @Override
     public String ruleType() {
         return "price_menu_format";
@@ -39,7 +44,15 @@ public class PriceMenuFormatMatcher implements RuleMatcher {
                     "检测到多档报价格式（房型+价格多次出现）"));
         }
 
-        if (MULTI_PRICE_PATTERN.matcher(text).find()) {
+        Matcher multiMatcher = MULTI_PRICE_PATTERN.matcher(text);
+        if (multiMatcher.find()) {
+            // 排除交通语境：数字串前后 15 字符内有交通相关词则跳过
+            int start = Math.max(0, multiMatcher.start() - 15);
+            int end = Math.min(text.length(), multiMatcher.end() + 15);
+            String context = text.substring(start, end);
+            if (TRANSPORT_CONTEXT.matcher(context).find()) {
+                return Optional.empty();
+            }
             return Optional.of(new RuleHit(ruleType(), WEIGHT,
                     "检测到多个价格用分隔符罗列"));
         }

@@ -36,8 +36,8 @@ class FallbackLLMClientTest {
     @Value("${rentdetective.llm.openai-compatible.model}")
     private String cloudModel;
 
-    private OllamaLLMClient primary;
-    private OpenAiCompatibleLLMClient secondary;
+    private OpenAiCompatibleLLMClient primary;
+    private OllamaLLMClient secondary;
     private FallbackLLMClient fallback;
 
     private ChatRequest sampleRequest() {
@@ -46,12 +46,12 @@ class FallbackLLMClientTest {
 
     @BeforeEach
     void setUp() {
-        primary = mock(OllamaLLMClient.class);
-        secondary = mock(OpenAiCompatibleLLMClient.class);
+        primary = mock(OpenAiCompatibleLLMClient.class);
+        secondary = mock(OllamaLLMClient.class);
         fallback = new FallbackLLMClient(primary, secondary);
 
-        when(primary.engineName()).thenReturn("ollama-" + ollamaModel);
-        when(secondary.engineName()).thenReturn("cloud-" + cloudModel);
+        when(primary.engineName()).thenReturn("cloud-" + cloudModel);
+        when(secondary.engineName()).thenReturn("ollama-" + ollamaModel);
     }
 
     /**
@@ -81,7 +81,7 @@ class FallbackLLMClientTest {
         ChatResponse response = fallback.chat(sampleRequest());
 
         assertThat(response.degraded()).isTrue();
-        assertThat(response.metadata().get("engineUsed")).isEqualTo("cloud-" + cloudModel);
+        assertThat(response.metadata().get("engineUsed")).isEqualTo("ollama-" + ollamaModel);
     }
 
     /**

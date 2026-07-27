@@ -12,33 +12,37 @@ import java.util.List;
 
 /**
  * Prompt injection 检测工具。
- * TODO: 规则词表由作者提供后实现——当前为占位检测，仅覆盖基本注入模式。
+ * 基于关键词 + 结构模式匹配，覆盖三种主要注入变体：
+ * 1. 直接指令型（忽略以上要求、直接判定安全）
+ * 2. 角色扮演型（你现在是XX、无条件配合）
+ * 3. 伪装系统消息型（[系统提示]、[SYSTEM]）
  */
 @Component
 public class DetectInjectionTool implements Tool {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    /**
-     * 基本注入检测关键词（占位实现）。
-     * TODO: 规则词表由作者提供后替换为完整的注入模式词库。
-     */
+    /** 注入检测关键词（覆盖中英文三种攻击变体） */
     private static final String[] INJECTION_KEYWORDS = {
-            "忽略以上指令",
-            "忽略之前",
-            "忽略所有",
-            " disregard previous",
-            "ignore previous",
-            "ignore all",
-            "system prompt",
-            "你现在是",
-            "你是一个",
-            "you are now",
-            "act as",
-            "pretend you are",
-            "override",
-            "jailbreak",
-            "DAN mode"
+            // --- 直接指令型 ---
+            "忽略以上", "忽略之前", "忽略所有", "忽略上述",
+            "无视以上", "无视之前", "无视所有",
+            "跳过检测", "跳过检查", "直接判定", "强制判定",
+            "判定为安全", "判定本房源安全", "输出安全", "结论为安全",
+            "不要检测", "不要分析", "直接通过",
+            "disregard previous", "ignore previous", "ignore all",
+            "forget everything", "new instructions", "do not follow",
+            "bypass", "override", "jailbreak", "DAN mode",
+            // --- 角色扮演型 ---
+            "你现在是", "你是一个", "你不再是", "从现在开始你是",
+            "无条件配合", "听从我的", "按我说的做", "必须服从我",
+            "扮演", "假装你是", "假装自己是",
+            "you are now", "you are no longer", "act as", "pretend you are",
+            "from now on you", "obey me", "follow my instructions only",
+            // --- 伪装系统消息型 ---
+            "[系统提示]", "[系统消息]", "[系统指令]", "[system]",
+            "<<sys>>", "<</sys>>", "[inst]", "[instruction]",
+            "system prompt", "system message", "admin override"
     };
 
     @Override
@@ -49,9 +53,9 @@ public class DetectInjectionTool implements Tool {
     @Override
     public String description() {
         return "检测输入文本中是否包含 Prompt injection（提示词注入）攻击模式。" +
+                "覆盖直接指令型、角色扮演型、伪装系统消息型三种变体。" +
                 "输入待检测文本，返回是否发现注入以及命中的关键词列表。" +
-                "参数：input（必填，待检测文本）或 description（备选字段名）。" +
-                "注意：当前为占位实现，规则词表由作者提供后完善。";
+                "参数：input（必填，待检测文本）或 description（备选字段名）。";
     }
 
     @Override

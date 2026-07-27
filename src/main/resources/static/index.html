@@ -122,24 +122,52 @@
                 const reader = resp.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
+                let eventType = '';
+                let dataLines = [];
+
+                function processEvent() {
+                    if (dataLines.length > 0) {
+                        const data = dataLines.join('\n').trim();
+                        console.log('[SSE] event:', eventType, 'data:', data.substring(0, 120));
+                        try {
+                            if (eventType === 'step') appendStep(JSON.parse(data));
+                            else if (eventType === 'report') showReport(data);
+                            else if (eventType === 'error') showError(data);
+                        } catch (e) {
+                            console.warn('[SSE] parse error:', e, data.substring(0, 200));
+                        }
+                        dataLines = [];
+                        eventType = '';
+                    }
+                }
+
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
+                    const chunk = decoder.decode(value, { stream: true });
+                    console.log('[SSE] raw chunk:', JSON.stringify(chunk.substring(0, 200)));
+                    buffer += chunk;
                     const lines = buffer.split('\n');
                     buffer = lines.pop();
-                    let eventType = '';
                     for (const line of lines) {
                         if (line.startsWith('event:')) {
                             eventType = line.slice(6).trim();
                         } else if (line.startsWith('data:')) {
-                            const data = line.slice(5).trim();
-                            if (eventType === 'step') appendStep(JSON.parse(data));
-                            else if (eventType === 'report') showReport(data);
-                            else if (eventType === 'error') showError(data);
+                            dataLines.push(line.slice(5));
+                        } else if (line.trim() === '') {
+                            processEvent();
                         }
                     }
                 }
+                /* 流结束后处理残余 buffer */
+                if (buffer.trim()) {
+                    const remainLines = buffer.split('\n');
+                    for (const line of remainLines) {
+                        if (line.startsWith('event:')) eventType = line.slice(6).trim();
+                        else if (line.startsWith('data:')) dataLines.push(line.slice(5));
+                    }
+                }
+                processEvent();
                 /* 流结束 → 在轨迹末尾追加「调查完成」 */
                 appendStep({ type: 'complete', content: '调查完成' });
             } catch (err) {
