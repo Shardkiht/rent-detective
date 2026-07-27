@@ -3,20 +3,36 @@ package io.github.shardkiht.rentdetective.semantic.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+/**
+ * 欺诈规则实体。规则来自 104 条人工标注，规则引擎为确定性打分。
+ */
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName("scam_rule")
 public class ScamRule {
 
     @TableId(type = IdType.AUTO)
-    private Long id;
+    @JsonProperty("id")
+    private Integer id;
 
-    private String ruleName;
+    @JsonProperty("ruleType")
+    private String ruleType;
 
+    @JsonProperty("pattern")
     private String pattern;
 
-    private String description;
+    @JsonProperty("weight")
+    private double weight;
 
-    private Boolean enabled;
+    @JsonProperty("note")
+    private String note;
+
+    @JsonProperty("enabled")
+    private boolean enabled;
 }

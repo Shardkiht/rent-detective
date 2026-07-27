@@ -27,4 +27,8 @@ public class Listing {
     private String phone;
 
     private String status;
+
+    private String riskLevel;
+
+    private String riskTags;
 }

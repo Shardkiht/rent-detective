@@ -118,9 +118,9 @@ public class ReActAgentLoop {
 
         EvidenceChainReport parsed = tryParseVerdict(response.content());
         if (parsed == null) {
-            // 连强制收尾都解析失败，兜底给一个最低置信度的 SUSPECT 结论
+            // 连强制收尾都解析失败，兜底给一个最低置信度的 SUSPICIOUS 结论
             parsed = new EvidenceChainReport();
-            parsed.setVerdict("SUSPECT");
+            parsed.setVerdict("SUSPICIOUS");
             parsed.setConfidence(0.3);
             EvidenceChainReport.Evidence fallbackEvidence = new EvidenceChainReport.Evidence();
             fallbackEvidence.setClaim("Agent 未能在规定步数内给出结构化结论，标记为疑似待人工复核");

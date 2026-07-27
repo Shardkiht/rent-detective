@@ -16,10 +16,14 @@ public class ListingService {
     }
 
     public void importListing(Listing listing) {
-        throw new UnsupportedOperationException("Not implemented");
+        listingMapper.insert(listing);
     }
 
     public List<Listing> list() {
-        throw new UnsupportedOperationException("Not implemented");
+        return listingMapper.selectList(null);
+    }
+
+    public Listing findById(Long id) {
+        return listingMapper.selectById(id);
     }
 }

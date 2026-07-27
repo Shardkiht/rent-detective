@@ -3,22 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>租房侦探</title>
+    <title>租房侦探 — Agent 调查工具</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
-        h1 { color: #e74c3c; }
-        .status { padding: 1rem; background: #f4f4f4; border-radius: 4px; margin: 1rem 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; max-width: 860px; margin: 0 auto; }
+        h1 { color: #c0392b; margin-bottom: 0.3rem; font-size: 1.6rem; }
+        .subtitle { color: #777; font-size: 0.85rem; margin-bottom: 1.5rem; }
+        form { background: #fff; padding: 1.2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        label { display: block; font-weight: 600; margin-bottom: 0.2rem; font-size: 0.9rem; }
+        input, textarea { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; margin-bottom: 0.8rem; }
+        textarea { resize: vertical; min-height: 60px; }
+        button { background: #c0392b; color: #fff; border: none; padding: 0.6rem 1.6rem; border-radius: 4px; font-size: 0.95rem; cursor: pointer; }
+        button:hover { background: #a93226; }
+        button:disabled { background: #999; cursor: not-allowed; }
+        .section { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.2rem; margin-bottom: 1.5rem; }
+        .section h2 { font-size: 1rem; margin-bottom: 0.8rem; color: #555; }
+        #trace { max-height: 400px; overflow-y: auto; }
+        .step { padding: 0.5rem 0.7rem; border-left: 3px solid #3498db; background: #f9f9f9; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0; font-size: 0.85rem; }
+        .step.tool_call { border-left-color: #e67e22; }
+        .step.tool_result { border-left-color: #27ae60; }
+        .step.final_answer { border-left-color: #8e44ad; }
+        .step.complete { border-left-color: #27ae60; background: #eafaf1; font-weight: 600; }
+        .step .type { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; color: #888; }
+        .step .content { margin-top: 0.3rem; white-space: pre-wrap; word-break: break-word; }
+        .error { color: #c0392b; font-weight: 600; }
+        .hidden { display: none; }
+
+        /* 调查结论 */
+        .verdict { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.6rem; }
+        .verdict.safe { color: #27ae60; }
+        .verdict.risky { color: #c0392b; }
+        .verdict.uncertain { color: #e67e22; }
+        .summary { font-size: 0.9rem; color: #555; margin-bottom: 1rem; line-height: 1.5; }
+
+        /* 证据表格 */
+        .evidence-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.5rem; }
+        .evidence-table th { background: #f0f0f0; text-align: left; padding: 0.5rem; font-weight: 600; border-bottom: 2px solid #ddd; }
+        .evidence-table td { padding: 0.5rem; border-bottom: 1px solid #eee; vertical-align: top; }
+        .evidence-table tr:last-child td { border-bottom: none; }
+        .evidence-table .type { font-weight: 600; color: #3498db; }
+        .evidence-table .type.case { color: #27ae60; }
+        .evidence-table .type.rule { color: #e67e22; }
+
+        /* 相似案例 */
+        .similar-cases { margin-top: 1rem; }
+        .similar-case-item { padding: 0.5rem 0.7rem; border-left: 3px solid #9b59b6; background: #f9f5ff; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0; font-size: 0.85rem; }
+        .similar-case-item .score { font-weight: 700; color: #8e44ad; }
+        .similar-case-item .reason { color: #888; font-size: 0.8rem; }
+
+        /* 报告内轨迹 */
+        .report-trace { margin-top: 1rem; }
+        .report-trace-item { padding: 0.5rem 0.7rem; border-left: 3px solid #3498db; background: #f9f9f9; margin-bottom: 0.4rem; border-radius: 0 4px 4px 0; font-size: 0.83rem; }
+        .report-trace-item.thought { border-left-color: #3498db; }
+        .report-trace-item.tool_call { border-left-color: #e67e22; }
+        .report-trace-item.tool_result { border-left-color: #27ae60; }
+        .report-trace-item.final_answer { border-left-color: #8e44ad; }
+        .report-trace-item .rt-type { font-weight: 700; text-transform: uppercase; font-size: 0.73rem; color: #888; }
+        .report-trace-item .rt-tool { color: #e67e22; font-weight: 600; font-size: 0.73rem; }
+        .report-trace-item .rt-content { margin-top: 0.25rem; white-space: pre-wrap; word-break: break-word; color: #444; }
     </style>
 </head>
 <body>
     <h1>租房侦探</h1>
-    <div class="status" id="status">等待调查任务...</div>
+    <p class="subtitle">Agent 循环手写，工具可插拔 — 输入房源信息，执行风险调查</p>
+
+    <form id="form">
+        <label for="title">标题</label>
+        <input id="title" name="title" required placeholder="如：精装修一居室 近地铁">
+        <label for="description">描述</label>
+        <textarea id="description" name="description" placeholder="房源详细描述..."></textarea>
+        <label for="price">价格（元/月）</label>
+        <input id="price" name="price" type="number" required placeholder="1500">
+        <label for="phone">联系电话</label>
+        <input id="phone" name="phone" placeholder="13800138000">
+        <button type="submit" id="submitBtn">开始调查</button>
+    </form>
+
+    <div class="section hidden" id="traceSection">
+        <h2>调查轨迹</h2>
+        <div id="trace"></div>
+    </div>
+
+    <div class="section hidden" id="reportSection">
+        <h2>调查报告</h2>
+        <div id="report"></div>
+    </div>
+
     <script>
-        const status = document.getElementById('status');
-        const evtSource = new EventSource('/api/investigate/stream');
-        evtSource.onmessage = e => {
-            status.innerText = e.data;
-        };
+        const form = document.getElementById('form');
+        const traceDiv = document.getElementById('trace');
+        const reportDiv = document.getElementById('report');
+        const traceSection = document.getElementById('traceSection');
+        const reportSection = document.getElementById('reportSection');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.textContent = '调查中...';
+            traceDiv.innerHTML = '';
+            reportDiv.innerHTML = '';
+            traceSection.classList.remove('hidden');
+            reportSection.classList.add('hidden');
+
+            const body = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                price: parseFloat(document.getElementById('price').value),
+                phone: document.getElementById('phone').value
+            };
+
+            try {
+                const resp = await fetch('/api/investigate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    let eventType = '';
+                    for (const line of lines) {
+                        if (line.startsWith('event:')) {
+                            eventType = line.slice(6).trim();
+                        } else if (line.startsWith('data:')) {
+                            const data = line.slice(5).trim();
+                            if (eventType === 'step') appendStep(JSON.parse(data));
+                            else if (eventType === 'report') showReport(data);
+                            else if (eventType === 'error') showError(data);
+                        }
+                    }
+                }
+                /* 流结束 → 在轨迹末尾追加「调查完成」 */
+                appendStep({ type: 'complete', content: '调查完成' });
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '开始调查';
+            }
+        });
+
+        function appendStep(step) {
+            const div = document.createElement('div');
+            div.className = 'step ' + (step.type || '');
+            const label = step.toolName ? step.type + ' [' + step.toolName + ']' : step.type;
+            div.innerHTML = '<div class="type">' + label + '</div><div class="content">' + escapeHtml(step.content || '') + '</div>';
+            traceDiv.appendChild(div);
+            traceDiv.scrollTop = traceDiv.scrollHeight;
+        }
+
+        function showReport(json) {
+            reportSection.classList.remove('hidden');
+            try {
+                const report = JSON.parse(json);
+                reportDiv.innerHTML = renderReport(report);
+            } catch {
+                reportDiv.textContent = json;
+            }
+        }
+
+        function renderReport(r) {
+            let html = '';
+            const report = r.report || {};
+
+            /* 调查结论 */
+            const verdict = r.verdict || '未知';
+            const verdictClass = /安全|低风险|通过|SAFE/i.test(verdict) ? 'safe' : /高风险|危险|欺诈|SUSPICIOUS|REVIEW/i.test(verdict) ? 'risky' : 'uncertain';
+            html += '<div class="verdict ' + verdictClass + '">结论：' + escapeHtml(verdict) + '</div>';
+
+            /* 摘要 */
+            if (report.summary) {
+                html += '<div class="summary">' + escapeHtml(report.summary) + '</div>';
+            }
+
+            /* 证据链表格 */
+            const evidence = report.evidence || [];
+            if (evidence.length > 0) {
+                html += '<h3 style="font-size:0.9rem;color:#555;margin-bottom:0.4rem;">证据链</h3>';
+                html += '<table class="evidence-table">';
+                html += '<thead><tr><th>类型</th><th>详情</th></tr></thead>';
+                html += '<tbody>';
+                for (const ev of evidence) {
+                    const typeClass = ev.type === 'case' ? 'case' : 'rule';
+                    html += '<tr>';
+                    html += '<td class="type ' + typeClass + '">' + escapeHtml(ev.type || '') + '</td>';
+                    html += '<td>' + escapeHtml(ev.detail || '') + '</td>';
+                    html += '</tr>';
+                }
+                html += '</tbody></table>';
+            }
+
+            /* 调查轨迹（报告内） */
+            const trace = r.trace || [];
+            if (trace.length > 0) {
+                html += '<div class="report-trace">';
+                html += '<h3 style="font-size:0.9rem;color:#555;margin-bottom:0.4rem;">调查轨迹</h3>';
+                for (const step of trace) {
+                    const stepType = step.type || '';
+                    html += '<div class="report-trace-item ' + stepType + '">';
+                    let label = stepType;
+                    if (step.toolName) {
+                        label += ' <span class="rt-tool">[' + escapeHtml(step.toolName) + ']</span>';
+                    }
+                    html += '<div class="rt-type">' + label + '</div>';
+                    html += '<div class="rt-content">' + escapeHtml(step.content || '') + '</div>';
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            /* 相似案例 */
+            const similarCases = report.similarCases || [];
+            if (similarCases.length > 0) {
+                html += '<div class="similar-cases">';
+                html += '<h3 style="font-size:0.9rem;color:#555;margin-bottom:0.4rem;">相似案例</h3>';
+                for (const sc of similarCases) {
+                    html += '<div class="similar-case-item">';
+                    html += '<span class="score">相似度: ' + (sc.score * 100).toFixed(0) + '%</span>';
+                    html += ' — 案例 #' + escapeHtml(String(sc.listingId));
+                    if (sc.reason) {
+                        html += ' <span class="reason">(' + escapeHtml(sc.reason) + ')</span>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            return html;
+        }
+
+        function showError(msg) {
+            reportSection.classList.remove('hidden');
+            reportDiv.innerHTML = '<span class="error">错误: ' + escapeHtml(msg) + '</span>';
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
     </script>
 </body>
 </html>

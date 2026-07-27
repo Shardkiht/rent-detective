@@ -32,7 +32,7 @@ class ReActAgentLoopTest {
     private ReActAgentLoop agentLoop;
 
     private static final String VALID_VERDICT_JSON = """
-            {"verdict": "SCAM", "confidence": 0.85, "evidences": [{"claim": "价格远低于市场价", "sourceTool": "check_price_anomaly", "sourceCase": null, "quote": "月租1500元，同区域均价4500元"}]}""";
+            {"verdict": "REVIEW", "confidence": 0.85, "evidences": [{"claim": "价格远低于市场价", "sourceTool": "check_price_anomaly", "sourceCase": null, "quote": "月租1500元，同区域均价4500元"}]}""";
 
     @BeforeEach
     void setUp() {
@@ -66,7 +66,7 @@ class ReActAgentLoopTest {
         EvidenceChainReport result = agentLoop.investigate(sampleListing());
 
         assertThat(result.isConverged()).isTrue();
-        assertThat(result.getVerdict()).isEqualTo("SCAM");
+        assertThat(result.getVerdict()).isEqualTo("REVIEW");
         assertThat(result.getConfidence()).isEqualTo(0.85);
         assertThat(result.getEvidences()).hasSize(1);
         assertThat(result.getTrace()).isNotEmpty();
@@ -104,7 +104,7 @@ class ReActAgentLoopTest {
         EvidenceChainReport result = agentLoop.investigate(sampleListing());
 
         assertThat(result.isConverged()).isTrue();
-        assertThat(result.getVerdict()).isEqualTo("SCAM");
+        assertThat(result.getVerdict()).isEqualTo("REVIEW");
 
         // 验证 trace 包含 tool_call 和 tool_result
         List<String> traceTypes = result.getTrace().stream().map(AgentStep::type).toList();
@@ -140,7 +140,7 @@ class ReActAgentLoopTest {
         EvidenceChainReport result = agentLoop.investigate(sampleListing());
 
         assertThat(result.isConverged()).isTrue();
-        assertThat(result.getVerdict()).isEqualTo("SCAM");
+        assertThat(result.getVerdict()).isEqualTo("REVIEW");
         // 调用了两次模型
         verify(llmClient, times(2)).chat(any());
         log.info("[PASS] invalidFormatRetriesAndConverges: verdict={}, converged={}", result.getVerdict(), result.isConverged());
@@ -161,7 +161,7 @@ class ReActAgentLoopTest {
 
         // forceConclude 时最后一次调用返回一个高置信度 JSON（验证封顶逻辑）
         ChatResponse forceResponse = ChatResponse.builder()
-                .content("{\"verdict\": \"SUSPECT\", \"confidence\": 0.9, \"evidences\": []}")
+                .content("{\"verdict\": \"SUSPICIOUS\", \"confidence\": 0.9, \"evidences\": []}")
                 .hasToolCall(false)
                 .degraded(false)
                 .build();
@@ -177,7 +177,7 @@ class ReActAgentLoopTest {
         assertThat(result.isConverged()).isFalse();
         // confidence 被封顶到 0.5，即使模型输出了 0.9
         assertThat(result.getConfidence()).isEqualTo(0.5);
-        assertThat(result.getVerdict()).isEqualTo("SUSPECT");
+        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
         log.info("[PASS] maxStepsTriggersForceConcludeWithCappedConfidence: verdict={}, confidence={} (capped from 0.9), converged={}",
                 result.getVerdict(), result.getConfidence(), false);
     }
@@ -210,7 +210,7 @@ class ReActAgentLoopTest {
         EvidenceChainReport result = agentLoop.investigate(sampleListing());
 
         assertThat(result.isConverged()).isTrue();
-        assertThat(result.getVerdict()).isEqualTo("SCAM");
+        assertThat(result.getVerdict()).isEqualTo("REVIEW");
 
         // trace 中 tool_result 记录了错误信息
         AgentStep toolResultStep = result.getTrace().stream()

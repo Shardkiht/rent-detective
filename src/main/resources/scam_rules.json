@@ -1,0 +1,114 @@
+[
+  {
+    "ruleType": "coverage_language",
+    "pattern": "3条以上地铁线路站点罗列，或\"多套出租\"/\"附近多套\"/\"都有房源\"",
+    "weight": 0.6,
+    "note": "中介覆盖语：罗列多条线路站点或声称多套房源",
+    "enabled": true
+  },
+  {
+    "ruleType": "price_menu_format",
+    "pattern": "单间XXX+独卫XXX+整租XXX起 多档报价格式",
+    "weight": 0.7,
+    "note": "菜单式报价：多档价格罗列，典型中介话术",
+    "enabled": true
+  },
+  {
+    "ruleType": "self_disclosed_agent",
+    "pattern": "昵称含\"租赁/中介/小能手/管家/租房小能手\"等职业自曝词",
+    "weight": 0.8,
+    "note": "职业自曝：昵称中暴露中介身份",
+    "enabled": true
+  },
+  {
+    "ruleType": "agent_stock_phrase",
+    "pattern": "强词(\"看房热线/看房联系管家/今日特价\")→0.6；弱词(\"随时看房/拎包入住/家电齐全/精装修\")≥2个→0.3，1个→0.1",
+    "weight": 0.6,
+    "note": "中介套话：强词直接命中0.6，弱词按数量分档",
+    "enabled": true
+  },
+  {
+    "ruleType": "phone_obfuscation",
+    "pattern": "手机号用顿号/空格分隔",
+    "weight": 0.3,
+    "note": "号码混淆：用特殊分隔符规避平台检测",
+    "enabled": true
+  },
+  {
+    "ruleType": "over_denial",
+    "pattern": "\"非中介/非二房东/不赚差价/无套路\"出现≥2次",
+    "weight": 0.6,
+    "note": "过度否认：反复声明非中介反而可疑",
+    "enabled": true
+  },
+  {
+    "ruleType": "emotional_narrative",
+    "pattern": "情感描写+\"舍不得/有感情/太舒服\"但细节缺失",
+    "weight": 0.6,
+    "note": "情感叙事：用感情牌掩盖信息不足",
+    "enabled": true
+  },
+  {
+    "ruleType": "identity_mixed",
+    "pattern": "\"全女生/全男生合租\"+\"自家房子/自住直租\"混用",
+    "weight": 0.5,
+    "note": "身份混用：合租描述与个人房源描述矛盾",
+    "enabled": true
+  },
+  {
+    "ruleType": "persona_mismatch",
+    "pattern": "口语化开头+\"民水电/包网包物业\"专业术语",
+    "weight": 0.5,
+    "note": "人设错位：口语与专业术语混搭",
+    "enabled": true
+  },
+  {
+    "ruleType": "unverifiable_endorsement",
+    "pattern": "\"开发商自持/品牌公寓\"但无具体品牌名",
+    "weight": 0.4,
+    "note": "不可验证背书：笼统声称但无具体品牌",
+    "enabled": true
+  },
+  {
+    "ruleType": "verifiable_endorsement",
+    "pattern": "\"出示房产证/可提供合同核实/押一付X含明细\"",
+    "weight": -0.5,
+    "note": "可验证背书：提供可核实凭证，降低风险分",
+    "enabled": true
+  },
+  {
+    "ruleType": "wechat_only_weak",
+    "pattern": "仅微信号无手机号",
+    "weight": 0.2,
+    "note": "弱联系方式：仅提供微信，无手机号",
+    "enabled": true
+  },
+  {
+    "ruleType": "contact_spam",
+    "pattern": "同一联系方式重复≥3次",
+    "weight": 0.4,
+    "note": "联系方式刷屏：重复粘贴联系方式",
+    "enabled": true
+  },
+  {
+    "ruleType": "sales_over_substance",
+    "pattern": "生活方式描述>房屋信息（占比<30%）",
+    "weight": 0.5,
+    "note": "营销大于实质：生活描述远多于房屋信息",
+    "enabled": true
+  },
+  {
+    "ruleType": "out_of_region_ip",
+    "pattern": "IP属地与房源城市不一致",
+    "weight": 0.4,
+    "note": "异地IP：发布者IP与房源所在地不符",
+    "enabled": true
+  },
+  {
+    "ruleType": "neutral_self_claim",
+    "pattern": "\"房东直租/个人转租\"（中性，不参与打分）",
+    "weight": 0.0,
+    "note": "中性自述：房东直租等声明，不影响评分",
+    "enabled": false
+  }
+]

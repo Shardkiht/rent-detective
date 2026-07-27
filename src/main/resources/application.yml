@@ -9,3 +9,11 @@ mybatis-plus:
   type-aliases-package: io.github.shardkiht.rentdetective.**.entity
   configuration:
     map-underscore-to-camel-case: true
+
+rule:
+  threshold:
+    suspicious: 0.6
+    review: 0.4
+
+rag:
+  embed-on-startup: false
