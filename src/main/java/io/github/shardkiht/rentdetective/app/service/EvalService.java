@@ -1,8 +1,10 @@
 package io.github.shardkiht.rentdetective.app.service;
 
-import io.github.shardkiht.rentdetective.app.eval.EvalRunner;
-import io.github.shardkiht.rentdetective.app.eval.report.EvalReport;
+import io.github.shardkiht.rentdetective.semantic.eval.EvalRunner;
+import io.github.shardkiht.rentdetective.semantic.eval.EvalReport;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class EvalService {
@@ -13,7 +15,7 @@ public class EvalService {
         this.evalRunner = evalRunner;
     }
 
-    public EvalReport runEval() {
-        throw new UnsupportedOperationException("Not implemented");
+    public List<EvalReport> runEval() throws Exception {
+        return evalRunner.run(null);
     }
 }

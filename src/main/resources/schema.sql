@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS listings (
   description TEXT,
   phone VARCHAR(50),
   source VARCHAR(20),
+  url VARCHAR(500),
+  status VARCHAR(20),
   risk_level VARCHAR(20),
   risk_tags VARCHAR(255),
   eval_group VARCHAR(20),

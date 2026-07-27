@@ -21,5 +21,5 @@ public interface ListingMapper extends BaseMapper<Listing> {
                     #{source}, #{riskLevel}, #{riskTags}, #{evalGroup},
                     #{multiTierPricing}, #{labelNote})
             """)
-    int insertCustom(Listing listing);
+    void insertCustom(Listing listing);
 }
