@@ -17,9 +17,9 @@ public class PhoneObfuscationMatcher implements RuleMatcher {
 
     private static final double WEIGHT = 0.3;
 
-    /** 11位手机号被顿号或空格分成 3+4+4 格式 */
+    /** 11位手机号被顿号分成 3+4+4 格式（空格分隔为正常格式，不算混淆） */
     private static final Pattern OBFUSCATED_PHONE_PATTERN = Pattern.compile(
-            "1[3-9]\\d{1}[、\\s]\\d{4}[、\\s]\\d{4}");
+            "1[3-9]\\d{1}[、]\\d{4}[、]\\d{4}");
 
     @Override
     public String ruleType() {

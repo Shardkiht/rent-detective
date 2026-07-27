@@ -110,5 +110,12 @@
     "weight": 0.0,
     "note": "中性自述：房东直租等声明，不影响评分",
     "enabled": false
+  },
+  {
+    "ruleType": "contact_only_body",
+    "pattern": "正文去掉手机号/填充词后几乎无实质内容",
+    "weight": 0.2,
+    "note": "纯联系方式正文：正文仅为联系方式，无房源描述",
+    "enabled": true
   }
 ]

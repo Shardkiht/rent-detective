@@ -1,5 +1,6 @@
 package io.github.shardkiht.rentdetective.semantic.eval;
 
+import io.github.shardkiht.rentdetective.app.eval.JudgeUtils;
 import io.github.shardkiht.rentdetective.app.entity.Listing;
 import io.github.shardkiht.rentdetective.semantic.engine.EngineResult;
 import io.github.shardkiht.rentdetective.semantic.engine.ListingContext;
@@ -13,8 +14,12 @@ import org.apache.commons.csv.CSVRecord;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PushbackInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +32,8 @@ import java.util.stream.Collectors;
 @Component
 public class EvalRunner {
 
-    private static final String DEFAULT_CSV_PATH = "杭州租房_104条_终版.csv";
+    private static final Logger log = LoggerFactory.getLogger(EvalRunner.class);
+    private static final String DEFAULT_CSV_PATH = "杭州租房_104条_评测终版.csv";
 
     private final RuleEngine ruleEngine;
     private final PriceExtractor priceExtractor;
@@ -50,16 +56,31 @@ public class EvalRunner {
 
         ClassPathResource resource = new ClassPathResource(csvPath);
         List<CSVRecord> records;
-        try (InputStream is = resource.getInputStream();
-             InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8);
-             CSVParser parser = CSVFormat.DEFAULT.builder()
-                     .setHeader()
-                     .setSkipHeaderRecord(true)
-                     .setIgnoreHeaderCase(true)
-                     .setTrim(true)
-                     .build()
-                     .parse(reader)) {
-            records = parser.getRecords();
+        try (InputStream rawIs = resource.getInputStream();
+             PushbackInputStream is = new PushbackInputStream(rawIs, 3)) {
+            // 处理 UTF-8 BOM：跳过开头的 EF BB BF
+            int b1 = is.read();
+            if (b1 == 0xEF) {
+                int b2 = is.read();
+                int b3 = is.read();
+                if (b2 != 0xBB || b3 != 0xBF) {
+                    // 不是 BOM，推回
+                    is.unread(b3);
+                    is.unread(b2);
+                }
+            } else if (b1 != -1) {
+                is.unread(b1);
+            }
+            try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8);
+                 CSVParser parser = CSVFormat.DEFAULT.builder()
+                         .setHeader()
+                         .setSkipHeaderRecord(true)
+                         .setIgnoreHeaderCase(true)
+                         .setTrim(true)
+                         .build()
+                         .parse(reader)) {
+                records = parser.getRecords();
+            }
         }
 
         // 按 eval_group 分组收集结果
@@ -75,9 +96,12 @@ public class EvalRunner {
             String location = getSafe(record, "location");
             String phone = getSafe(record, "phone");
             String riskLevel = getSafe(record, "risk_level");
-            String evalGroup = getSafe(record, "data_quality_flag");
+            String evalGroup = getSafe(record, "eval_group");
             if (evalGroup.isBlank()) {
-                evalGroup = "normal";
+                // fallback: 从 risk_tags 推导
+                String riskTags = getSafe(record, "risk_tags");
+                evalGroup = computeEvalGroupFromRiskTags(riskTags);
+                log.warn("eval_group 列缺失，使用 risk_tags 推导分组，id={}, 推导结果={}", id, evalGroup);
             }
 
             Double price = null;
@@ -127,23 +151,7 @@ public class EvalRunner {
         List<EvalReport.MisCase> misCases = new ArrayList<>();
 
         for (RowResult r : results) {
-            boolean isCorrect;
-            switch (groupName) {
-                case "normal" -> {
-                    // normal：verdict 的 SUSPICIOUS/SAFE == risk_level 列
-                    String predicted = r.predicted.toLowerCase();
-                    isCorrect = predicted.equals(r.humanLabel.toLowerCase());
-                }
-                case "insufficient" -> {
-                    // insufficient：verdict ∈ {INSUFFICIENT, REVIEW}
-                    isCorrect = "INSUFFICIENT".equals(r.predicted) || "REVIEW".equals(r.predicted);
-                }
-                case "not_listing" -> {
-                    // not_listing：verdict == NOT_LISTING
-                    isCorrect = "NOT_LISTING".equals(r.predicted);
-                }
-                default -> isCorrect = false;
-            }
+            boolean isCorrect = JudgeUtils.judgeCorrect(groupName, r.humanLabel, r.predicted);
 
             if (isCorrect) {
                 correct++;
@@ -163,6 +171,20 @@ public class EvalRunner {
         } catch (Exception e) {
             return "";
         }
+    }
+
+    private static String computeEvalGroupFromRiskTags(String riskTags) {
+        if (riskTags == null || riskTags.isBlank()) {
+            return "normal";
+        }
+        String lower = riskTags.toLowerCase();
+        if (lower.contains("not_listing")) {
+            return "not_listing";
+        }
+        if (lower.contains("info_insufficient")) {
+            return "insufficient";
+        }
+        return "normal";
     }
 
     private static int parseIntSafe(String s, int defaultValue) {

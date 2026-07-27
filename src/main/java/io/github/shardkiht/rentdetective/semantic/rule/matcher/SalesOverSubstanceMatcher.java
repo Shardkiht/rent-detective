@@ -29,7 +29,7 @@ public class SalesOverSubstanceMatcher implements RuleMatcher {
      * 不含交通/地标等中性词——那些是位置描述，不是营销。
      */
     private static final Pattern MARKETING_PATTERN = Pattern.compile(
-            "温馨|浪漫|舒适|惬意|享受|时尚|潮流|打卡|网红|人气|口碑|必住|超值|划算|" +
+            "温馨|浪漫|舒适|舒服|惬意|享受|时尚|潮流|打卡|网红|人气|口碑|必住|超值|划算|" +
             "惊喜|心动|不容错过|错过后悔|手慢无|抢手|火爆|热销|秒杀|限时|特价|" +
             "拎包入住|管家式|酒店式|轻奢|高端|豪华|精装豪宅|品质生活|理想居所|" +
             "家的感觉|如归|暖心|贴心|尊享|私密|静谧|悠然|宜居|臻品");

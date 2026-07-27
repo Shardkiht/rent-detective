@@ -2,6 +2,7 @@ package io.github.shardkiht.rentdetective.app.controller;
 
 import io.github.shardkiht.rentdetective.app.entity.Listing;
 import io.github.shardkiht.rentdetective.app.service.ListingService;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,5 +35,14 @@ public class ListingController {
     @PostMapping("/import")
     public ListingService.ImportResult importListings(@RequestBody List<Listing> listings) {
         return listingService.importListings(listings);
+    }
+
+    /**
+     * DELETE /api/listings — 清空全部房源数据。
+     */
+    @DeleteMapping
+    public String clearAll() {
+        int count = listingService.clearAll();
+        return "已清空 " + count + " 条房源数据";
     }
 }

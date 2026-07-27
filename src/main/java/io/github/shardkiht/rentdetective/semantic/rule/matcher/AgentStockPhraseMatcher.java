@@ -24,7 +24,7 @@ public class AgentStockPhraseMatcher implements RuleMatcher {
     private static final Pattern STRONG_PATTERN = Pattern.compile(
             "看房热线|看房联系管家|今日特价");
 
-    private static final String[] WEAK_PHRASES = {"随时看房", "拎包入住", "家电齐全", "精装修"};
+    private static final String[] WEAK_PHRASES = {"随时看房", "拎包入住", "好房推荐", "无敌性价比", "通勤党狂喜"};
 
     @Override
     public String ruleType() {

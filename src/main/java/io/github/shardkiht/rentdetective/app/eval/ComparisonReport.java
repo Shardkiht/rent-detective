@@ -18,6 +18,7 @@ public record ComparisonReport(
             int total,
             int correct,
             double accuracy,
+            double reviewRate,
             List<MisCase> misCases
     ) {}
 

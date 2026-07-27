@@ -17,9 +17,9 @@ public class VerifiableEndorsementMatcher implements RuleMatcher {
 
     private static final double WEIGHT = -0.5;
 
-    /** 可验证的具体承诺 */
+    /** 可验证的具体承诺（要求完整语义，单个名词不命中） */
     private static final Pattern VERIFIABLE_PATTERN = Pattern.compile(
-            "出示房产证|提供房产证|可提供.*合同核实|提供原始租赁合同|押一付.*明细账单|可看房|可验证|房产证原件|合同原件");
+            "出示房产证|提供房产证原件|可提供.*合同核实|提供原始租赁合同.*核实|押一付.*明细账单|可验证.*房产证|房产证原件.*可看");
 
     @Override
     public String ruleType() {

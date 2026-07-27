@@ -45,7 +45,10 @@ public class ListingService {
                 continue;
             }
 
-            item.setEvalGroup(computeEvalGroup(item.getRiskTags()));
+            // CSV 有 eval_group 列时直接采用原值；仅当该列为空时才调用 computeEvalGroup 兆底
+            if (item.getEvalGroup() == null || item.getEvalGroup().isBlank()) {
+                item.setEvalGroup(computeEvalGroup(item.getRiskTags()));
+            }
 
             try {
                 listingMapper.insertCustom(item);
@@ -58,6 +61,10 @@ public class ListingService {
         return new ImportResult(imported, skipped, errors);
     }
 
+    /**
+     * 仅作无 eval_group 列时的兆底，金标准以 CSV eval_group 列为准。
+     */
+    @Deprecated
     private static String computeEvalGroup(String riskTags) {
         if (riskTags == null) {
             return "normal";
@@ -76,5 +83,12 @@ public class ListingService {
     }
 
     public record ErrorDetail(Long id, String message) {
+    }
+
+    /**
+     * 清空全部房源数据。
+     */
+    public int clearAll() {
+        return listingMapper.delete(null);
     }
 }

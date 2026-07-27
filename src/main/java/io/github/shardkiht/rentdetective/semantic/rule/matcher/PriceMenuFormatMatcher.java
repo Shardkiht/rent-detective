@@ -22,6 +22,11 @@ public class PriceMenuFormatMatcher implements RuleMatcher {
             "(单间|独卫|整租|一室|两室|三室|主卧|次卧|开间).{0,5}\\d{3,}.{0,10}" +
             "(单间|独卫|整租|一室|两室|三室|主卧|次卧|开间).{0,5}\\d{3,}");
 
+    /** 多行报价：多个"房型+价格"行（如"单间1500-3000\n一室1500-3000\n整租3000起"） */
+    private static final Pattern MULTI_LINE_PRICE_PATTERN = Pattern.compile(
+            "(单间|一室|两室|三室|整租|开间).{0,8}\\d{3,}.{0,20}(\\n|\n).{0,20}" +
+            "(单间|一室|两室|三室|整租|开间).{0,8}\\d{3,}");
+
     /** 备选：用 + 或逗号分隔的多档价格 */
     private static final Pattern MULTI_PRICE_PATTERN = Pattern.compile(
             "\\d{3,}元?.{0,5}[+＋、,，].{0,5}\\d{3,}元?.{0,5}[+＋、,，].{0,5}\\d{3,}");
@@ -42,6 +47,11 @@ public class PriceMenuFormatMatcher implements RuleMatcher {
         if (MENU_PATTERN.matcher(text).find()) {
             return Optional.of(new RuleHit(ruleType(), WEIGHT,
                     "检测到多档报价格式（房型+价格多次出现）"));
+        }
+
+        if (MULTI_LINE_PRICE_PATTERN.matcher(text).find()) {
+            return Optional.of(new RuleHit(ruleType(), WEIGHT,
+                    "检测到多行多档报价格式"));
         }
 
         Matcher multiMatcher = MULTI_PRICE_PATTERN.matcher(text);

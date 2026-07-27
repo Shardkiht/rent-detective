@@ -4,6 +4,7 @@ import io.github.shardkiht.rentdetective.app.entity.Listing;
 import io.github.shardkiht.rentdetective.semantic.pricing.PriceExtraction;
 import io.github.shardkiht.rentdetective.semantic.pricing.PriceExtractor;
 
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -30,7 +31,7 @@ public record ListingContext(
         PriceExtraction priceExtraction
 ) {
 
-    private static final Pattern PRICE_PATTERN = Pattern.compile("\\d+[元块/月]|价格|租金|\\d{3,}元");
+    private static final Pattern PRICE_PATTERN = Pattern.compile("\\d+[元块/月]|价格|租金|\\d{3,}元|(?<!\\d)\\d{3,4}(?!\\d)");
     private static final Pattern PHONE_PATTERN = Pattern.compile("1[3-9]\\d{9}");
     private static final Pattern WECHAT_PATTERN = Pattern.compile("微信[:：]");
     private static final Pattern DATE_LINE_PATTERN = Pattern.compile(".*20\\d{2}[-/].*");
@@ -68,9 +69,10 @@ public record ListingContext(
             }
 
             // 尝试从后续行提取 IP 属地（通常格式为 "IP属地：XX" 或单独一行属地信息）
+            // 支持省级名称不带"省"后缀的情况（如 "福建"、"浙江"、"广东"）
             for (int i = bodyStart; i < lines.length; i++) {
                 String line = lines[i].trim();
-                if (line.contains("IP属地") || line.matches(".*[省市自治区]$")) {
+                if (line.contains("IP属地") || isProvinceLine(line)) {
                     ipRegion = line.replace("IP属地", "").replace("：", "").replace(":", "").trim();
                     if (bodyStart <= i) {
                         bodyStart = i + 1;
@@ -125,5 +127,31 @@ public record ListingContext(
         return DATE_LINE_PATTERN.matcher(line).matches()
                 || line.matches("\\d{4}[-/]\\d{1,2}.*")
                 || line.contains("发布于") || line.contains("编辑于");
+    }
+
+    /** 省级名称列表（含后缀和无后缀两种形式） */
+    private static final Set<String> PROVINCE_NAMES = Set.of(
+            "北京", "天津", "上海", "重庆",
+            "河北", "山西", "辽宁", "吉林", "黑龙江",
+            "江苏", "浙江", "安徽", "福建", "江西", "山东",
+            "河南", "湖北", "湖南", "广东", "海南",
+            "四川", "贵州", "云南", "陕西", "甘肃", "青海",
+            "内蒙古", "广西", "西藏", "宁夏", "新疆",
+            "河北省", "山西省", "辽宁省", "吉林省", "黑龙江省",
+            "江苏省", "浙江省", "安徽省", "福建省", "江西省", "山东省",
+            "河南省", "湖北省", "湖南省", "广东省", "海南省",
+            "四川省", "贵州省", "云南省", "陕西省", "甘肃省", "青海省",
+            "北京市", "天津市", "上海市", "重庆市",
+            "内蒙古自治区", "广西壮族自治区", "西藏自治区",
+            "宁夏回族自治区", "新疆维吾尔自治区"
+    );
+
+    /**
+     * 判断一行是否为省级名称（支持带后缀和不带后缀）。
+     * 短行（≤6字）且匹配省级名称列表即视为 IP 属地行。
+     */
+    private static boolean isProvinceLine(String line) {
+        if (line.isEmpty() || line.length() > 6) return false;
+        return PROVINCE_NAMES.contains(line);
     }
 }

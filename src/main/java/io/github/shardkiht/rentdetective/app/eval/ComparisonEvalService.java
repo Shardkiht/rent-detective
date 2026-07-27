@@ -151,13 +151,17 @@ public class ComparisonEvalService {
 
         Map<String, GroupResult> groups = new LinkedHashMap<>();
         groups.put("normal", new GroupResult());
-        groups.put("info_insufficient", new GroupResult());
+        groups.put("insufficient", new GroupResult());
         groups.put("not_listing", new GroupResult());
 
         int processed = 0;
         for (Listing listing : listings) {
             processed++;
             String group = listing.getEvalGroup() != null ? listing.getEvalGroup() : "normal";
+            // 兼容旧数据中的 info_insufficient 分组名
+            if ("info_insufficient".equals(group)) {
+                group = "insufficient";
+            }
             GroupResult gr = groups.getOrDefault(group, groups.get("normal"));
 
             String predicted;
@@ -173,8 +177,11 @@ public class ComparisonEvalService {
                 predicted = "ERROR";
             }
 
-            boolean correct = judgeCorrect(group, listing.getRiskLevel(), predicted);
+            boolean correct = JudgeUtils.judgeCorrect(group, listing.getRiskLevel(), predicted);
             gr.total++;
+            if (JudgeUtils.isReview(predicted)) {
+                gr.reviewCount++;
+            }
             if (correct) {
                 gr.correct++;
             } else {
@@ -222,36 +229,6 @@ public class ComparisonEvalService {
         return report.getVerdict() != null ? report.getVerdict() : "UNKNOWN";
     }
 
-    // ==================== 判定逻辑 ====================
-
-    /**
-     * 判断预测是否正确。
-     * normal 组：predicted 与 humanLabel 匹配（safe↔SAFE, suspicious↔SUSPICIOUS）
-     * info_insufficient 组：predicted ∈ {INSUFFICIENT, REVIEW, SUSPICIOUS}（标出有问题即可）
-     * not_listing 组：predicted == NOT_LISTING
-     */
-    private boolean judgeCorrect(String group, String humanLabel, String predicted) {
-        if (predicted == null || "ERROR".equals(predicted)) {
-            return false;
-        }
-        String pred = predicted.toUpperCase();
-
-        return switch (group) {
-            case "normal" -> {
-                String label = humanLabel != null ? humanLabel.toLowerCase() : "";
-                yield switch (label) {
-                    case "safe" -> "SAFE".equals(pred);
-                    case "suspicious" -> "SUSPICIOUS".equals(pred) || "REVIEW".equals(pred);
-                    default -> false;
-                };
-            }
-            case "info_insufficient" ->
-                    "INSUFFICIENT".equals(pred) || "REVIEW".equals(pred) || "SUSPICIOUS".equals(pred);
-            case "not_listing" -> "NOT_LISTING".equals(pred);
-            default -> false;
-        };
-    }
-
     // ==================== 辅助方法 ====================
 
     private String parseVerdictFromLLM(String content) {
@@ -288,8 +265,9 @@ public class ComparisonEvalService {
             GroupResult gr = entry.getValue();
             if (gr.total == 0) continue;
             double accuracy = (double) gr.correct / gr.total;
+            double reviewRate = (double) gr.reviewCount / gr.total;
             groupReports.add(new ComparisonReport.GroupReport(
-                    entry.getKey(), gr.total, gr.correct, accuracy, gr.misCases));
+                    entry.getKey(), gr.total, gr.correct, accuracy, reviewRate, gr.misCases));
             totalAll += gr.total;
             correctAll += gr.correct;
         }
@@ -310,6 +288,7 @@ public class ComparisonEvalService {
     private static class GroupResult {
         int total = 0;
         int correct = 0;
+        int reviewCount = 0;
         List<ComparisonReport.MisCase> misCases = new ArrayList<>();
     }
 }

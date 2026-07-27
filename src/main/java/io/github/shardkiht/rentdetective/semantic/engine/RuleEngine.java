@@ -35,7 +35,7 @@ public class RuleEngine {
 
     /** info_insufficient 闸门常量 —— 与 eval_group 共用同一份定义 */
     private static final int BODY_MIN_LENGTH = 5;
-    private static final int BODY_SHORT_THRESHOLD = 30;
+    private static final int BODY_SHORT_THRESHOLD = 20;
     private static final int BODY_MEDIUM_THRESHOLD = 60;
     private static final int CORE_MISSING_THRESHOLD = 2;
 
@@ -115,15 +115,51 @@ public class RuleEngine {
         return new EngineResult(verdict, score, hits, advice, reason);
     }
 
+    private static final Pattern PHONE_IN_TEXT_PATTERN = Pattern.compile("1[3-9]\\d{9}");
+    /** 微信号/联系方式指示词（正文或 phone 字段中含这些词表示有联系渠道） */
+    private static final Pattern WECHAT_INDICATOR_PATTERN = Pattern.compile("微信|➕|加v|联系方式|微信号");
+    /** 昵称中的中介/职业房东关键词（与 Python 基线 gate_info_insufficient 同源） */
+    private static final Pattern NICKNAME_AGENT_PATTERN = Pattern.compile("租房|中介|公寓|房产|置业|民宿|短租");
+
     /**
      * info_insufficient 闸门条件。
-     * 条件与 eval_group 生成条件一致（共用常量定义）。
+     * 条件与 eval_group 生成条件共用同一份定义（抽常量禁止复制粘贴）。
      */
     private boolean isInfoInsufficient(String body, ListingContext ctx, Set<String> missingItems) {
         return body.length() < BODY_MIN_LENGTH
                 || body.endsWith("...") || body.endsWith("…")
                 || (body.length() < BODY_SHORT_THRESHOLD && !ctx.hasContact())
-                || (missingItems.size() >= CORE_MISSING_THRESHOLD && body.length() < BODY_MEDIUM_THRESHOLD);
+                || (missingItems.size() >= CORE_MISSING_THRESHOLD && body.length() < BODY_MEDIUM_THRESHOLD)
+                // 短正文 + 昵称自曝中介 + 无价格（与 Python 基线 gate_info 同源）
+                || (body.length() < BODY_SHORT_THRESHOLD && hasAgentNickname(ctx) && !ctx.hasPrice())
+                // 中等正文 + 无任何联系渠道（无手机号且无微信指示），阈值与 Python 基线同源
+                || (body.length() < BODY_SHORT_THRESHOLD + 25 && !ctx.hasContact() && !hasPhoneAnywhere(ctx) && !hasWechatIndicator(ctx));
+    }
+
+    /** 检查昵称是否含中介/职业房东关键词 */
+    private boolean hasAgentNickname(ListingContext ctx) {
+        String nickname = ctx.nickname();
+        return nickname != null && !nickname.isBlank() && NICKNAME_AGENT_PATTERN.matcher(nickname).find();
+    }
+
+    /** 检查是否有手机号（结构化字段或正文中） */
+    private boolean hasPhoneAnywhere(ListingContext ctx) {
+        String phone = ctx.phone();
+        if (phone != null && !phone.isBlank() && PHONE_IN_TEXT_PATTERN.matcher(phone).find()) {
+            return true;
+        }
+        String body = ctx.body() != null ? ctx.body() : "";
+        return PHONE_IN_TEXT_PATTERN.matcher(body).find();
+    }
+
+    /** 检查是否有微信/联系方式指示（phone 字段或正文中含微信相关词） */
+    private boolean hasWechatIndicator(ListingContext ctx) {
+        String phone = ctx.phone();
+        if (phone != null && !phone.isBlank() && WECHAT_INDICATOR_PATTERN.matcher(phone).find()) {
+            return true;
+        }
+        String body = ctx.body() != null ? ctx.body() : "";
+        return WECHAT_INDICATOR_PATTERN.matcher(body).find();
     }
 
     /**
