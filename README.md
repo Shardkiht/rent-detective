@@ -1,64 +1,283 @@
 # RentDetective（租房侦探）
 
-基于 Spring Boot + LLM + RAG 的租房风险侦查 Agent。
+基于 Spring Boot + 手写 ReAct Agent + RAG 的租房风险侦查系统。
 
-## 简介
+输入一段房源文本（标题/描述/价格/联系方式），系统通过规则引擎确定性打分 + Agent 多工具调查（相似案例检索、价格异常检测、注入检测），输出风险判定（SAFE / SUSPICIOUS / REVIEW / INSUFFICIENT / NOT_LISTING）与带证据链的调查报告。
 
-租房侦探通过 ReAct 循环驱动多工具协作，对房源描述、价格、相似房源、Prompt 注入等维度进行风险识别，输出带证据链的调查报告。
+**项目主线**：豆瓣小组采集 104 条真实房源 → 人工逐条标注（AI 预标注 + 人工复核，改判率 19%）→ 从标注中归纳 16 条可溯源识坑规则 → 手写 ReAct Agent + RAG 案例库 → 规则 / 纯 LLM / Agent+RAG 三方案同场评测。
+
+---
+
+## 目录
+
+- [核心结论：三方案评测](#核心结论三方案评测)
+- [技术栈](#技术栈)
+- [架构分层](#架构分层)
+- [规则体系（护城河）](#规则体系护城河)
+- [Agent 调查流程](#agent-调查流程)
+- [评测方法论](#评测方法论)
+- [调试硬仗（三个真实案例）](#调试硬仗三个真实案例)
+- [快速开始](#快速开始)
+- [局限与路线图](#局限与路线图)
+
+---
+
+## 核心结论：三方案评测
+
+评测集 24 条（normal 15 / insufficient 8 / not_listing 1），从 104 条中切出，同联系方式"马甲组"整体切分防泄题：
+
+| 方案 | 总体 | normal(15) | insufficient(8) | not_listing(1) | reviewRate |
+|---|---|---|---|---|---|
+| 规则引擎 | 83.3% | 73.3% | 100.0% | 100.0% | 5.6% |
+| Agent+RAG | 75.0% | **80.0%** | 62.5% | 100.0% | 6.7% |
+| 纯 LLM | 37.5% | 46.7% | 25.0% | 0.0% | — |
+
+**结论一：规则引擎赢在确定性场景。** 信息缺失、非房源有确定性判据（关键词 + 机械闸门），100% 是必然结果；但 normal 组的中介话术伪装（fake_personal、情感软广）超出文本规则的覆盖，73.3% 是它的天花板。
+
+**结论二：Agent 赢在模糊场景。** normal 组 80% 反超规则引擎——它能调相似案例检索发现"该房源与已标注中介马甲案例同号"，能调比价工具发现"报价偏离同区中位数 54%"，规则够不着的证据链它能现场挖出来。
+
+**结论三：纯 LLM 的 25%（insufficient 组）是整个评测最有价值的数字。** 信息不足的房源，纯 LLM 没有工具可查证，又倾向"给内容找结论"，8 条里 6 条硬猜出错——实证了"信息不足时不该乱下结论"，而这正是 Agent 工具链 + INSUFFICIENT 判定的设计动机。
+
+> 口径说明：normal 组严格判定（REVIEW 一律算错）；insufficient 组判定 INSUFFICIENT/REVIEW 算对（评测"系统是否承认信息不足"）；reviewRate 独立统计不计入准确率。
+
+---
 
 ## 技术栈
 
-- Java 17 / Spring Boot 3.3.2
-- MyBatis-Plus / MySQL / Redis
-- OkHttp（LLM HTTP 调用）
-- Ollama（本地推理 qwen3:1.7b + 嵌入 bge-m3）
-- 百炼平台（云端备用 qwen3.7-plus）
+| 层 | 选型 | 理由 |
+|---|---|---|
+| 语言/框架 | Java 17 + Spring Boot 3.3.2 | 主力技术栈 |
+| 持久层 | MyBatis-Plus + MySQL | 关系规则需要 SQL 分组查询（联系方式聚类） |
+| 缓存 | Redis | 评测任务进度/状态 |
+| LLM | Ollama 本地（qwen3:1.7b + bge-m3）+ 百炼云端备用（qwen3.7-plus） | 本地零成本开发 + Fallback 降级 |
+| HTTP | OkHttp | LLM 流式调用 |
+| 向量 | MySQL JSON 列存向量 + 应用层余弦相似度 | 百级数据量，不引入专用向量数据库 |
 
-## 当前进度
+**明确不用**：Spring AI / LangChain4j（Agent 循环手写是项目核心叙事）、Drools 等规则引擎框架（16 条规则手写 Matcher 更直白可溯源）、Milvus/ES（数据量不匹配）。
 
-| 模块     | 状态                                                                              |
-|----------|-----------------------------------------------------------------------------------|
-| llm      | ✅ 已完成：Ollama / OpenAI-Compatible 双引擎 + 主备降级 + Embedding               |
-| agent    | ✅ 已完成：ReAct 循环、括号计数 JSON 提取、工具超时兜底、forceConclude 置信度封顶 |
-| rag      | ✅ 已完成：向量存储、余弦相似度检索、启动时自动嵌入                               |
-| semantic | ✅ 已完成：16 条规则匹配器、规则引擎、价格提取、4 个 Agent 工具                   |
-| app      | 🔧 骨架已搭：Controller / Service / Mapper / 评测框架定义完毕，业务串联待完善     |
-| eval     | 🔧 框架已定义，评测用例待填充                                                     |
+---
+
+## 架构分层
+
+```
+┌─────────────────────────────────────────────┐
+│ 演示层   SSE 流式单页（实时展示 Agent 调查轨迹）      │
+├─────────────────────────────────────────────┤
+│ 平台层（通用骨架，无业务知识）                        │
+│  llm/     LLMClient + EmbeddingClient 抽象         │
+│           Ollama / OpenAI-Compatible / Fallback    │
+│  agent/   ReActAgentLoop：think-act-observe 循环   │
+│           括号计数 JSON 提取 / 工具超时兜底          │
+│           forceConclude 置信度封顶                  │
+│  rag/     CaseVectorService：向量化 + Top-K 检索   │
+│  eval/    三方案评测框架（共用 JudgeUtils）          │
+├─────────────────────────────────────────────┤
+│ 语义包层（私有护城河：识坑知识编码进工具）              │
+│  semantic/  规则引擎（三步顺序）+ 16 条 Matcher      │
+│             价格提取器 + 4 个 Agent 工具             │
+│             建议生成器（证据不足时的防坑建议）          │
+├─────────────────────────────────────────────┤
+│ 数据层   MySQL（listings / case_vectors / eval_case）│
+└─────────────────────────────────────────────┘
+```
+
+依赖方向严格单向：`llm → agent → rag/semantic → app`。
+
+---
+
+## 规则体系（护城河）
+
+16 条文本规则 + 2 条关系规则，**全部从 104 条人工标注中归纳**，每条规则在 `scam_rules.json` 中配置（ruleType/weight/note/触发案例 id），改配置不改代码。
+
+### 文本规则（按权重分档）
+
+**强信号（0.6–0.8，单项即可疑）**
+
+| 规则 | 判据 | 触发案例 |
+|---|---|---|
+| self_disclosed_agent | 昵称/正文自曝职业（"住宅租赁""租房小能手""公寓直租"） | 24, 66 |
+| price_menu_format | 多档报价单（"单间800+独卫1000+整租3000起"） | 17, 56, 87 |
+| coverage_language | 罗列多条地铁线"有房"，报覆盖范围而非描述一套房 | 53, 56, 42 |
+| over_denial | 撇清词≥2 且伴随感叹号/营销措辞（"非中介！不赚差价！"） | 8, 43, 99 |
+| emotional_narrative | 情感叙事拉满但户型/面积/价格零信息 | 50, 61, 94 |
+
+**中信号（0.4–0.5，需叠加）**
+
+| 规则 | 判据 |
+|---|---|
+| identity_mixed | "全女生合租"运营话术 × "自家房子"个人话术混用 |
+| persona_mismatch | 软萌口吻 × "民水电包网包物业"中介术语错位 |
+| sales_over_substance | 卖点全在外部（周边景点/生活方式），房子本身信息为零 |
+| unverifiable_endorsement | "开发商自持"但不给品牌名，背书无法验证 |
+| out_of_region_ip | 发帖 IP 属地 ≠ 房源城市（杭州房源 IP 在广东/江苏/福建） |
+| marketing_tone | "采光拉满""超治愈"小红书化营销腔 |
+| contact_spam | 同一电话在正文重复刷 ≥3 遍 |
+
+**弱信号（0.1–0.3，单独不定性）**
+
+| 规则 | 判据 |
+|---|---|
+| wechat_only_weak | 仅留微信不留电话（内容具体时更弱） |
+| agent_stock_phrase（弱词档） | "随时看房""拎包入住"等模板套话，≥2 个才 0.3 |
+| phone_obfuscation | 电话用顿号分隔（"188、5593、6307"）规避平台识别 |
+
+**正向规则**
+
+| 规则 | 判据 | 权重 |
+|---|---|---|
+| verifiable_endorsement | 主动提供验真方式（"出示房产证""提供原始租赁合同核实"） | -0.5 |
+| neutral_self_claim | "房东直租""个人转租"等自称词 | 0（中性，不加分不减分） |
+
+### 关系规则（查 MySQL，证据最硬）
+
+- **联系方式聚类**：同一 phone 挂 ≥3 套不同房源 → 0.8；2 套 → 0.5。实测抓出 15505888755 五个昵称马甲、15068812900 三个马甲
+- **同号不同价**：同 phone 下相似标题房源价格不一致 → 0.9。实测案例：同一微信 wjzdcs 发两条一字不差文案，一间"阳光单间"分别标 1000/1100
+
+### 规则引擎三步顺序（不可调换）
+
+```
+第一步 not_listing   → 标题含"求租/找室友/值得嘛"且不含"有房" → NOT_LISTING
+第二步 insufficient  → 机械闸门（正文<5字 / 截断 / 正文<30字且无联系方式
+                        / 核心信息缺失≥2且正文<60字）→ INSUFFICIENT + 防坑建议
+第三步 加权打分      → 16条文本规则 + 2条关系规则求和
+                        ≥0.6 SUSPICIOUS / 0.4-0.6 REVIEW / <0.4 SAFE
+                        （正向规则减分不翻盘：≥2条强负面时 verifiable 只降到 REVIEW）
+```
+
+阈值在 `application.yml`（`rule.threshold.suspicious/review`），不硬编码。
+
+---
+
+## Agent 调查流程
+
+### ReAct 循环（手写，无框架）
+
+```
+system prompt（角色 + 工具列表 + 识坑判断指引 + 输出协议）
+    ↓
+LLM 输出 Thought → Action(工具名) → Action Input(JSON)
+    ↓ 解析（括号计数法提取 JSON，失败则把格式错误作为 Observation 拼回，给一次自我修正）
+执行工具（10s 超时兜底）→ Observation 拼回上下文
+    ↓ 最多 8 轮（maxSteps）
+Final Answer → forceConclude 置信度封顶 → 调查报告
+```
+
+### 四个工具
+
+| 工具 | 实现 | 防泄题 |
+|---|---|---|
+| analyze_description | 委托规则引擎，返回命中规则+分数 | — |
+| search_similar_listings | 向量检索 Top-K，返回相似已标注案例+相似原因 | excludeIds 排除评测集 |
+| check_price_anomaly | 同区+相似度≥0.85 的可比案例 → 中位数偏离 ±35% | excludeIds 排除评测集 |
+| detect_injection | 房源文本中的 prompt injection 指令检测 | — |
+
+### 工具数约束（条件式）
+
+结论 SAFE/SUSPICIOUS → 必须 ≥2 个不同工具（高风险结论交叉验证）；结论 INSUFFICIENT/NOT_LISTING → 允许 1 个工具（信息不足时无工具可调，不强凑）。
+
+---
+
+## 评测方法论
+
+**分组（eval_group 列，机械闸门生成）**：normal 72 / insufficient 30 / not_listing 2。闸门条件与规则引擎第二步**共用同一份代码定义**——评测标准答案和系统判定用同一把尺，避免口径错位。
+
+**切分防泄题**：80 案例库 / 24 评测集；同一联系方式的马甲组（15505888755×5 等 4 组 12 条）整体进同一边，否则检索到"兄弟房源"等于泄题。
+
+**判定口径（三方案共用 JudgeUtils）**：normal 组严格（REVIEW 算错）；insufficient 组口径A（输出 INSUFFICIENT/REVIEW 算对，评"知不知道信息不足"）；reviewRate 独立统计不混算。
+
+---
+
+## 调试硬仗（三个真实案例）
+
+### ① 价格工具误报：文本相似 ≠ 同一价格世界
+
+余杭区 1000 元 safe 房源（ID=1），向量检索 Top 相似案例混入未来科技城 4800 元大户型（2200/1798/4800），中位数 2200 → 偏离 -54.5% → 误报 ANOMALY，Agent 被误导判 SUSPICIOUS。
+
+**修复**：可比案例必须同区（10 个杭州区名正则提取，任一方提取不到则弃用）+ 相似度 ≥0.85 + 有效案例 <3 条时诚实返回 INSUFFICIENT_DATA。配套 prompt 纪律："INSUFFICIENT_DATA 意为无法比价，不计入任何方向判断"。
+
+### ② Prompt 不对称：只教《刑法》的法官看谁都像嫌疑人
+
+初版识坑 prompt 列了 16 类风险信号，但**一个字没教"什么安全"**，外加"结论必须基于工具证据"——而工具只能产出风险证据，没有任何工具能产出安全证据。Agent 拿着一堆"没找到危险"的阴性结果，唯一合规出口只剩 REVIEW：8 条 safe 被推去 REVIEW/INSUFFICIENT，reviewRate 33.3%，normal 组仅 26.7%。
+
+**修复**：补"安全信号"段落（细节具体/主动交代缺点/报价符行情/计费结构具体）+ "默认原则"（无风险证据本身就是 SAFE 依据，REVIEW 仅限正负证据冲突）。修复后 reviewRate 6.7%，normal 组 80.0%，总体 45.8% → 75.0%。
+
+### ③ 评测口径错位：题目和答案用了两把尺
+
+分组字段误用 `data_quality_flag` 列（21 条）而非 `eval_group` 列（30 条），且判定逻辑对 REVIEW 的处理不对称（suspicious 时算对、safe 时算错），三方案数字整体失真（Agent 一度 50.96% vs 修复后真实水平 75%）。
+
+**修复**：分组读 eval_group 列；判定逻辑抽 JudgeUtils 三方案共用；reviewRate 拆为独立指标。
+
+---
+
+## 数据来源与标注
+
+- **采集**：豆瓣「杭州租房小组」实时抓取（限速防封），多源合并去重 → 104 条终版
+- **标注流程**：AI 预标注打草稿 → 人工逐条复核确权 → **改判率 19%**（20/104 条人工推翻 AI 草稿，含"身份混用""过度自证""情感叙事零细节"等 AI 漏判模式）
+- **标签体系**：safe 57 / suspicious 47 + 12 类风险标签 + 每条附判断理由（label_note），全部可溯源
+- **标注副产品**：6 类识坑判断模式（身份混用检测/过度自证识别/标的物信息密度/背书可验证性/跨帖联系方式聚类/人设措辞错位）→ 直接转化为规则引擎规则
+
+---
 
 ## 包结构
 
 ```
 io.github.shardkiht.rentdetective
 ├── llm/
-│   ├── api/          接口层（LLMClient、EmbeddingClient）
-│   └── impl/         实现层（Ollama、OpenAI-Compatible、Fallback）
+│   ├── api/          LLMClient / EmbeddingClient 接口 + 消息模型
+│   └── impl/         Ollama / OpenAiCompatible / Fallback（主备降级）
 ├── agent/
-│   ├── loop/         ReAct 循环 + 常量
-│   ├── report/       证据链报告
-│   └── tool/         工具注册与调度（含超时）
-├── rag/              向量检索（CaseVector、CosineSimilarity）
+│   ├── loop/         ReActAgentLoop / AgentLoopConstants（识坑 system prompt）
+│   ├── report/       InvestigationReport 证据链报告
+│   └── tool/         Tool 接口 / ToolRegistry / 超时调度 / AgentContext
+├── rag/              CaseVectorService / CosineSimilarity / CaseVectorMapper
 ├── semantic/
-│   ├── engine/       规则引擎 + 建议生成
-│   ├── rule/matcher/ 16 条风险匹配器
-│   ├── pricing/      价格提取
-│   ├── tool/         Agent 工具实现
-│   └── cases/        案例库
-└── app/              启动层 + Controller + Service + Eval
+│   ├── engine/       RuleEngine（三步顺序）/ Verdict / EngineResult / AdviceGenerator
+│   ├── rule/
+│   │   ├── scam_rules.json 权威规则配置（resources）
+│   │   └── matcher/  16 个 Matcher（javadoc 标注触发案例 id）
+│   ├── pricing/      PriceExtractor（防"2km"误提取为 2000 元；多档报价不填单一值）
+│   ├── tool/         AnalyzeDescription / SearchSimilarListings
+│   │                 / CheckPriceAnomaly / DetectInjection
+│   └── eval/         EvalRunner（规则方案评测，错分明细输出）
+└── app/              Controller / SSE 评测接口 / ComparisonEvalService / JudgeUtils
 ```
 
-依赖方向严格单向：`llm → agent → rag/semantic → app`。
+---
 
-## 编译 & 测试
+## 快速开始
 
-```bash
-mvn clean compile
-mvn test
-```
-
-## 运行
+前置：Java 17、MySQL、Redis、本地 Ollama（`qwen3:1.7b` + `bge-m3`）
 
 ```bash
+# 1. 建表（listings / case_vectors / eval_case）
+# 2. 导入标注数据（杭州租房_104条_评测终版.csv）
+# 3. 启动（首次自动向量嵌入，rag.embed-on-startup=true）
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
+
+# 4. 提交房源调查（SSE 流式返回 Agent 轨迹）
+curl -N -X POST http://localhost:8080/api/investigate \
+  -H "Content-Type: application/json" \
+  -d '{"title":"...","description":"...","price":1500,"phone":"..."}'
+
+# 5. 三方案评测（rule / llm / agent）
+curl -X POST "http://localhost:8080/api/eval/start?strategy=agent"
+curl "http://localhost:8080/api/eval/progress?strategy=agent"
 ```
 
-前置条件：本地 Ollama 运行（qwen3:1.7b + bge-m3）、MySQL、Redis。
+规则阈值：`application.yml` → `rule.threshold.suspicious: 0.6` / `rule.threshold.review: 0.4`。
+
+---
+
+## 局限与路线图
+
+**局限**
+- 评测集 24 条样本量小，单条影响 ±4.2%，对比结论以趋势为准
+- 向量相似度无法识别"内容像 safe 的话术骗局"（ID=8 错分案例）——此类伪装依赖规则判据补充
+- 56% 房源无公开价格，价格异常检测覆盖受限（INSUFFICIENT_DATA 为诚实兜底）
+- 规则与标注均来自豆瓣单一数据源，跨平台泛化未验证
+
+**路线图**
+- 规则 + Agent 协同：规则引擎粗筛（快、确定），Agent 对 REVIEW 条目深度复查
+- 扩充评测集至 50+ 条降低统计噪声
+- Prompt injection 检测的对抗样本扩充
+- 更多城市/平台数据源
