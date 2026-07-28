@@ -3,11 +3,14 @@ package io.github.shardkiht.rentdetective.app.controller;
 import io.github.shardkiht.rentdetective.app.eval.ComparisonEvalService;
 import io.github.shardkiht.rentdetective.app.eval.ComparisonReport;
 import io.github.shardkiht.rentdetective.app.service.EvalService;
+import io.github.shardkiht.rentdetective.rag.CaseVectorService;
 import io.github.shardkiht.rentdetective.semantic.eval.EvalReport;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/eval")
@@ -15,10 +18,34 @@ public class EvalController {
 
     private final EvalService evalService;
     private final ComparisonEvalService comparisonEvalService;
+    private final CaseVectorService caseVectorService;
 
-    public EvalController(EvalService evalService, ComparisonEvalService comparisonEvalService) {
+    public EvalController(EvalService evalService, ComparisonEvalService comparisonEvalService, CaseVectorService caseVectorService) {
         this.evalService = evalService;
         this.comparisonEvalService = comparisonEvalService;
+        this.caseVectorService = caseVectorService;
+    }
+
+    /** 重新嵌入向量（切换 embedding 模型后调用） */
+    @PostMapping("/reembed")
+    public Map<String, String> reembed() {
+        caseVectorService.reembedAll();
+        return Map.of("message", "向量已重新嵌入");
+    }
+
+    /** RAG 搜索调试：查询文本返回 Top-K 相似案例 */
+    @GetMapping("/search-debug")
+    public List<io.github.shardkiht.rentdetective.rag.SimilarCase> searchDebug(
+            @RequestParam String text,
+            @RequestParam(defaultValue = "5") int k,
+            @RequestParam(required = false) String excludeIds) {
+        Set<Integer> exclude = null;
+        if (excludeIds != null && !excludeIds.isBlank()) {
+            exclude = Set.of(excludeIds.split(","))
+                    .stream().map(String::trim).map(Integer::parseInt)
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+        return caseVectorService.search(text, k, null, exclude);
     }
 
     /** 原有纯规则引擎评测（从 CSV），可选传入 csvPath 指定评测集 */
@@ -38,8 +65,7 @@ public class EvalController {
             @RequestParam(defaultValue = "rule") String strategy,
             @RequestParam(required = false) String listingIds) {
         if (listingIds != null && !listingIds.isBlank()) {
-            List<Long> ids = List.of(listingIds.split(","))
-                    .stream().map(String::trim).map(Long::parseLong).toList();
+            List<Long> ids = Stream.of(listingIds.split(",")).map(String::trim).map(Long::parseLong).toList();
             return comparisonEvalService.run(strategy, ids);
         }
         return comparisonEvalService.run(strategy);
@@ -53,8 +79,7 @@ public class EvalController {
     public Map<String, String> start(@RequestParam(defaultValue = "llm") String strategy,
                                      @RequestParam(required = false) String listingIds) {
         if (listingIds != null && !listingIds.isBlank()) {
-            List<Long> ids = List.of(listingIds.split(","))
-                    .stream().map(String::trim).map(Long::parseLong).toList();
+            List<Long> ids = Stream.of(listingIds.split(",")).map(String::trim).map(Long::parseLong).toList();
             comparisonEvalService.startAsync(strategy, ids);
         } else {
             comparisonEvalService.startAsync(strategy);

@@ -15,26 +15,38 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
  * 价格异常检测工具（相似案例比较法）。
  * 通过向量检索找到相似房源，取可比案例价格中位数，判断当前价格偏离程度。
  * 样本不足时诚实返回"无法判断"，不硬编结论。
+ * 同区过滤 + 文本相似度门槛：
+ * 实测案例 ID=1（余杭区 safe 房源，1000元）被相似案例 2200/1798/4800 拉高基准，
+ * 中位数 2200 → 偏离度 -54.5% → 误报 ANOMALY。文本相似 ≠ 同一价格世界，
+ * 因此引入同区过滤器与相似度门槛 0.85。
  */
 @Component
 public class CheckPriceAnomalyTool implements Tool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** 相似度阈值：低于此值的案例不纳入比较 */
-    private static final double SIMILARITY_THRESHOLD = 0.6;
+    /**
+     * 相似度门槛：仅相似度 ≥ 0.85 的案例可进入价格样本。
+     * 与 reason 模板"高度相似"档位对齐（参见 SearchSimilarListingsTool 的 reason 描述）。
+     */
+    private static final double SIMILARITY_THRESHOLD = 0.85;
 
     /** 最少可比案例数：不足则返回"样本不足" */
     private static final int MIN_COMPARABLE = 3;
 
     /** 偏离度阈值：超过 ±35% 判定异常 */
     private static final double DEVIATION_THRESHOLD = 0.35;
+
+    /** 杭州区名正则，用于从标题提取同区（宁缺毋滥） */
+    private static final Pattern DISTRICT_PATTERN = Pattern.compile("余杭|拱墅|西湖|滨江|上城|临平|萧山|钱塘|富阳|临安");
 
     private final CaseVectorService caseVectorService;
     private final ListingMapper listingMapper;
@@ -78,7 +90,7 @@ public class CheckPriceAnomalyTool implements Tool {
                                 "价格 ≤ 0，明显异常")));
             }
 
-            String searchText = getText(node, "description", "location");
+            String searchText = getText(node);
             if (searchText == null || searchText.isBlank()) {
                 return ToolResult.ok(MAPPER.writeValueAsString(
                         new Result("UNKNOWN", price, 0, 0, 0,
@@ -97,14 +109,28 @@ public class CheckPriceAnomalyTool implements Tool {
             // 向量检索 top-10 相似案例（排除评测集 ID）
             List<SimilarCase> cases = caseVectorService.search(searchText, 10, null, excludeIds);
 
-            // 过滤：相似度 > 阈值 且 有有效价格
+            // 提取查询房源的区名（从 searchText 中）
+            String queryDistrict = extractDistrict(searchText);
+
+            // 过滤：同区 + 相似度 ≥ 0.85 + 有有效价格
+            // 实测：ID=1（余杭 1000元）被 2200/1798/4800 拉高 → 误报 ANOMALY，需要同区 + 高相似度
             List<Double> comparablePrices = new ArrayList<>();
             for (SimilarCase sc : cases) {
+                // 第一道：相似度门槛 0.85（与 reason 模板"高度相似"档位对齐）
                 if (sc.score() < SIMILARITY_THRESHOLD) {
                     continue;
                 }
                 Listing listing = listingMapper.selectById((long) sc.listingId());
-                if (listing != null && listing.getPrice() != null && listing.getPrice() > 0) {
+                if (listing == null) {
+                    continue;
+                }
+                // 第二道：同区过滤（宁缺毋滥：任一方提取不到区名时该候选不保留）
+                String caseDistrict = extractDistrict(listing.getTitle());
+                if (queryDistrict == null || !queryDistrict.equals(caseDistrict)) {
+                    continue;
+                }
+                // 第三道：有效价格
+                if (listing.getPrice() != null && listing.getPrice() > 0) {
                     comparablePrices.add(listing.getPrice());
                 }
             }
@@ -113,7 +139,7 @@ public class CheckPriceAnomalyTool implements Tool {
             if (comparablePrices.size() < MIN_COMPARABLE) {
                 return ToolResult.ok(MAPPER.writeValueAsString(
                         new Result("INSUFFICIENT_DATA", price, comparablePrices.size(), 0, 0,
-                                String.format("可比样本不足（仅 %d 条，需 ≥ %d），无法判断",
+                                String.format("同区可比案例不足（仅 %d 条，需 ≥ %d），无法判断",
                                         comparablePrices.size(), MIN_COMPARABLE))));
             }
 
@@ -150,12 +176,26 @@ public class CheckPriceAnomalyTool implements Tool {
         return prices.get(n / 2);
     }
 
-    private String getText(JsonNode node, String... fields) {
-        for (String field : fields) {
+    private String getText(JsonNode node) {
+        for (String field : new String[]{"description", "location"}) {
             JsonNode val = node.get(field);
             if (val != null && !val.isNull() && !val.asText().isBlank()) {
                 return val.asText();
             }
+        }
+        return null;
+    }
+
+    /**
+     * 从文本中提取杭州区名。任一方提取不到区名时返回 null（宁缺毋滥）。
+     */
+    private String extractDistrict(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        Matcher m = DISTRICT_PATTERN.matcher(text);
+        if (m.find()) {
+            return m.group();
         }
         return null;
     }

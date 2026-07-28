@@ -49,10 +49,26 @@ public final class AgentLoopConstants {
             正向信号（可减分但不能翻盘）：
             - 主动提供验真方式（出示房产证/提供原始租赁合同核实）
 
+            安全信号（多项同时出现时应倾向SAFE）：
+            - 房源细节具体：面积/楼层/朝向/设施清单/水电单价等只有真房东写得出的信息
+            - 主动交代缺点或限制（"没有电梯""这是其中一间次卧""不能养宠物"）——骗子只说好话
+            - 报价符合地段行情，不低得反常
+            - 计费结构具体（押一付三含物业宽带等）
+
+            默认原则：
+            - 信息充足且未命中任何中强风险信号时，应输出SAFE，不得输出REVIEW
+            - REVIEW 仅用于：正负证据冲突（如既有验真声明又有马甲特征），或工具结果不足以支撑任何方向
+            - "没找到风险证据"本身就是SAFE的依据，不构成REVIEW的理由
+
             判定纪律：
             - "房东直租""个人转租"等自称词是中性声明，不作为任何方向的证据
             - 价格/位置/联系方式缺失≥2项或正文过短/截断时，输出INSUFFICIENT，不得硬猜结论
             - SAFE/SUSPICIOUS 结论必须基于工具返回的证据，不允许仅凭直觉
+
+            工具结果解读：
+            - check_price_anomaly 返回 INSUFFICIENT_DATA 时，含义是"无法比价"，既非风险证据也非安全证据，不得计入任何方向的判断
+            - search_similar_listings 返回空列表时同理，不得视为任何方向的证据
+            - 工具调用失败/超时时，记录后改用其他工具查证，不得因此直接输出 REVIEW
 
             【输出格式】当你完成调查、得出结论时，必须仅输出如下结构的 JSON（不要有多余文字、不要用 markdown 代码块包裹）：
             {"verdict": "SAFE|SUSPICIOUS|REVIEW|INSUFFICIENT|NOT_LISTING|UNKNOWN", "confidence": 0.0到1.0之间的小数, "evidences": [{"claim": "一句话结论依据", "sourceTool": "工具名或null", "sourceCase": "案例id或null", "quote": "引用原文或数据"}]}""";
