@@ -114,6 +114,19 @@ public class CaseVectorService {
      * @return 按相似度降序的相似案例列表
      */
     public List<SimilarCase> search(String text, int k, String queryPhone) {
+        return search(text, k, queryPhone, null);
+    }
+
+    /**
+     * Top-K 检索（排除指定 ID，用于评测时排除泄题）。
+     *
+     * @param text        查询文本
+     * @param k           返回数量
+     * @param queryPhone  查询方联系电话，可为 null
+     * @param excludeIds  需要排除的 listingId 集合，为 null 则不排除
+     * @return 按相似度降序的相似案例列表
+     */
+    public List<SimilarCase> search(String text, int k, String queryPhone, Set<Integer> excludeIds) {
         float[] queryVector = embeddingClient.embed(text);
 
         List<CaseVector> allVectors = caseVectorMapper.selectList(null);
@@ -127,9 +140,12 @@ public class CaseVectorService {
                 .toList();
         Map<Integer, Listing> listingMap = loadListingMap(listingIds);
 
-        // 逐条计算余弦相似度
+        // 逐条计算余弦相似度（排除指定 ID）
         List<ScoredVector> scored = new ArrayList<>();
         for (CaseVector cv : allVectors) {
+            if (excludeIds != null && excludeIds.contains(cv.getListingId())) {
+                continue;
+            }
             float[] storedVector = deserializeVector(cv.getVectorJson());
             if (storedVector == null) {
                 continue;

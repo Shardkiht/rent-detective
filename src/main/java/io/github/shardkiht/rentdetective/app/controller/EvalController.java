@@ -21,28 +21,44 @@ public class EvalController {
         this.comparisonEvalService = comparisonEvalService;
     }
 
-    /** 原有纯规则引擎评测（从 CSV） */
+    /** 原有纯规则引擎评测（从 CSV），可选传入 csvPath 指定评测集 */
     @GetMapping("/rule-csv")
-    public List<EvalReport> evalFromCsv() throws Exception {
-        return evalService.runEval();
+    public List<EvalReport> evalFromCsv(
+            @RequestParam(required = false) String csvPath) throws Exception {
+        return evalService.runEval(csvPath);
     }
 
     /**
      * 三方案对比评测（同步，适合 rule 策略）。
      * GET /api/eval/compare?strategy=rule|llm|agent
+     * 可选参数 listingIds: 逗号分隔的 ID 列表，仅评测指定条目
      */
     @GetMapping("/compare")
-    public ComparisonReport compare(@RequestParam(defaultValue = "rule") String strategy) {
+    public ComparisonReport compare(
+            @RequestParam(defaultValue = "rule") String strategy,
+            @RequestParam(required = false) String listingIds) {
+        if (listingIds != null && !listingIds.isBlank()) {
+            List<Long> ids = List.of(listingIds.split(","))
+                    .stream().map(String::trim).map(Long::parseLong).toList();
+            return comparisonEvalService.run(strategy, ids);
+        }
         return comparisonEvalService.run(strategy);
     }
 
     /**
      * 异步启动评测（立即返回，后台执行，适合 llm/agent）。
-     * POST /api/eval/start?strategy=llm
+     * POST /api/eval/start?strategy=llm&listingIds=1,2,3
      */
     @PostMapping("/start")
-    public Map<String, String> start(@RequestParam(defaultValue = "llm") String strategy) {
-        comparisonEvalService.startAsync(strategy);
+    public Map<String, String> start(@RequestParam(defaultValue = "llm") String strategy,
+                                     @RequestParam(required = false) String listingIds) {
+        if (listingIds != null && !listingIds.isBlank()) {
+            List<Long> ids = List.of(listingIds.split(","))
+                    .stream().map(String::trim).map(Long::parseLong).toList();
+            comparisonEvalService.startAsync(strategy, ids);
+        } else {
+            comparisonEvalService.startAsync(strategy);
+        }
         return Map.of("message", "评测已启动", "strategy", strategy,
                 "statusUrl", "/api/eval/progress?strategy=" + strategy);
     }

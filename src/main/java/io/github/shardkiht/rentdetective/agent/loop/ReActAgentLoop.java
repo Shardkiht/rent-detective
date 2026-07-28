@@ -42,13 +42,39 @@ public class ReActAgentLoop {
     }
 
     public EvidenceChainReport investigate(Listing listing) {
-        return investigate(listing, step -> {});
+        return investigateInternal(listing, null, step -> {});
     }
 
-    /** 至少调用多少个不同工具后才允许给出结论 */
-    private static final int MIN_DISTINCT_TOOLS = 2;
-
     public EvidenceChainReport investigate(Listing listing, Consumer<AgentStep> onStep) {
+        return investigateInternal(listing, null, onStep);
+    }
+
+    public EvidenceChainReport investigateWithExclude(Listing listing, Set<Long> excludeIds) {
+        return investigateInternal(listing, excludeIds, step -> {});
+    }
+
+    public EvidenceChainReport investigateWithExclude(Listing listing, Set<Long> excludeIds, Consumer<AgentStep> onStep) {
+        return investigateInternal(listing, excludeIds, onStep);
+    }
+
+    /** 高风险结论至少需要 2 个不同工具交叉验证 */
+    private static final int MIN_TOOLS_FOR_RISK = 2;
+    /** 低风险结论（INSUFFICIENT/NOT_LISTING）只需 1 个工具 */
+    private static final int MIN_TOOLS_FOR_LOW_RISK = 1;
+
+    private EvidenceChainReport investigateInternal(Listing listing, Set<Long> excludeIds, Consumer<AgentStep> onStep) {
+        // 设置上下文，供工具使用（评测时排除评测集 ID，避免泄题）
+        if (excludeIds != null && !excludeIds.isEmpty()) {
+            AgentContext.setExcludeIds(excludeIds);
+        }
+        try {
+            return doInvestigate(listing, onStep);
+        } finally {
+            AgentContext.clear();
+        }
+    }
+
+    private EvidenceChainReport doInvestigate(Listing listing, Consumer<AgentStep> onStep) {
         List<Message> messages = new ArrayList<>();
         messages.add(Message.system(SYSTEM_PROMPT));
         messages.add(Message.user(formatListingInfo(listing)));
@@ -89,18 +115,23 @@ public class ReActAgentLoop {
 
                 EvidenceChainReport parsed = tryParseVerdict(response.content());
 
-                // 工具调用不足时拒绝接受结论，强制模型继续调工具
-                if (parsed != null && toolsCalled.size() < MIN_DISTINCT_TOOLS) {
-                    log.info("Agent 试图在仅调用 {} 个工具后给出结论，拒绝并要求继续调查", toolsCalled.size());
-                    messages.add(Message.assistant(response.content()));
-                    messages.add(Message.user(
-                            "你目前只调用了 " + toolsCalled.size() + " 个工具（" + toolsCalled + "），证据不充分。" +
-                            "请不要编造其他工具的结果，必须实际调用至少 " + MIN_DISTINCT_TOOLS +
-                            " 个不同工具后才能给出结论。请继续调用其他工具（如 check_price_anomaly、search_similar_listings）获取更多信息。"));
-                    continue;
-                }
-
                 if (parsed != null) {
+                    // 根据结论类型确定最小工具数要求
+                    String verdict = parsed.getVerdict();
+                    int minTools = isLowRiskVerdict(verdict) ? MIN_TOOLS_FOR_LOW_RISK : MIN_TOOLS_FOR_RISK;
+
+                    // 工具调用不足时拒绝接受结论，强制模型继续调工具
+                    if (toolsCalled.size() < minTools) {
+                        log.info("Agent 试图在仅调用 {} 个工具后给出 {} 结论，拒绝并要求继续调查",
+                                toolsCalled.size(), verdict);
+                        messages.add(Message.assistant(response.content()));
+                        messages.add(Message.user(
+                                "你目前只调用了 " + toolsCalled.size() + " 个工具（" + toolsCalled + "），证据不充分。" +
+                                "对于 " + verdict + " 结论，需要至少 " + minTools +
+                                " 个不同工具的支持。请继续调用其他工具获取更多信息。"));
+                        continue;
+                    }
+
                     emitStep(onStep, trace, new AgentStep(step, "final_answer", null, response.content(), now()));
                     return buildResult(parsed, trace, true);
                 } else {
@@ -114,6 +145,13 @@ public class ReActAgentLoop {
 
         // 达到步数上限仍未收敛，强制结束
         return forceConclude(messages, trace, onStep);
+    }
+
+    /**
+     * 判断是否为低风险结论（只需 1 个工具即可收敛）。
+     */
+    private boolean isLowRiskVerdict(String verdict) {
+        return "INSUFFICIENT".equals(verdict) || "NOT_LISTING".equals(verdict);
     }
 
     // ==================== 内部辅助方法 ====================

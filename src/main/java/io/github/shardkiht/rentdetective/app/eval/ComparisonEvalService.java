@@ -114,6 +114,13 @@ public class ComparisonEvalService {
      * 异步启动评测（立即返回，后台执行）。
      */
     public void startAsync(String strategy) {
+        startAsync(strategy, null);
+    }
+
+    /**
+     * 异步启动评测（指定 listingIds）。
+     */
+    public void startAsync(String strategy, List<Long> listingIds) {
         EvalProgress current = progressMap.get(strategy);
         if (current != null && current.status() == Status.RUNNING) {
             log.warn("[{}] 评测已在运行中，跳过重复触发", strategy);
@@ -122,7 +129,7 @@ public class ComparisonEvalService {
         progressMap.put(strategy, new EvalProgress(Status.RUNNING, 0, 0, null, null));
         executor.submit(() -> {
             try {
-                ComparisonReport report = run(strategy);
+                ComparisonReport report = run(strategy, listingIds);
                 progressMap.put(strategy, new EvalProgress(Status.COMPLETED, report.total(), report.total(), report, null));
             } catch (Exception e) {
                 log.error("[{}] 评测异常终止", strategy, e);
@@ -145,8 +152,29 @@ public class ComparisonEvalService {
      * @return 按 evalGroup 分组的评测结果
      */
     public ComparisonReport run(String strategy) {
-        List<Listing> listings = listingMapper.selectList(null);
-        log.info("开始评测 [{}]，共 {} 条数据", strategy, listings.size());
+        return run(strategy, null);
+    }
+
+    /**
+     * 运行指定策略的评测，可指定仅评测特定 listing ID。
+     *
+     * @param strategy   "rule" / "llm" / "agent"
+     * @param listingIds 仅评测这些 ID 的 listings；为 null 则评测全部
+     * @return 按 evalGroup 分组的评测结果
+     */
+    public ComparisonReport run(String strategy, List<Long> listingIds) {
+        List<Listing> listings;
+        Set<Long> excludeIds = null;
+        if (listingIds != null && !listingIds.isEmpty()) {
+            listings = listingMapper.selectBatchIds(listingIds);
+            // 将评测集 ID 作为 excludeIds，避免 Agent RAG 检索泄题
+            excludeIds = new HashSet<>(listingIds);
+            log.info("开始评测 [{}]，共 {} 条数据（指定{}个ID，RAG排除{}个ID）",
+                    strategy, listings.size(), listingIds.size(), excludeIds.size());
+        } else {
+            listings = listingMapper.selectList(null);
+            log.info("开始评测 [{}]，共 {} 条数据", strategy, listings.size());
+        }
         progressMap.put(strategy, new EvalProgress(Status.RUNNING, 0, listings.size(), null, null));
 
         Map<String, GroupResult> groups = new LinkedHashMap<>();
@@ -169,7 +197,7 @@ public class ComparisonEvalService {
                 predicted = switch (strategy) {
                     case "rule" -> evalByRule(listing);
                     case "llm" -> evalByLLM(listing);
-                    case "agent" -> evalByAgent(listing);
+                    case "agent" -> evalByAgent(listing, excludeIds);
                     default -> throw new IllegalArgumentException("未知策略: " + strategy);
                 };
             } catch (Exception e) {
@@ -224,8 +252,8 @@ public class ComparisonEvalService {
         return parseVerdictFromLLM(response.content());
     }
 
-    private String evalByAgent(Listing listing) {
-        EvidenceChainReport report = agentLoop.investigate(listing);
+    private String evalByAgent(Listing listing, Set<Long> excludeIds) {
+        EvidenceChainReport report = agentLoop.investigateWithExclude(listing, excludeIds);
         return report.getVerdict() != null ? report.getVerdict() : "UNKNOWN";
     }
 

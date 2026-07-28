@@ -16,6 +16,10 @@ public class EvalService {
     }
 
     public List<EvalReport> runEval() throws Exception {
-        return evalRunner.run(null);
+        return runEval(null);
+    }
+
+    public List<EvalReport> runEval(String csvPath) throws Exception {
+        return evalRunner.run(csvPath);
     }
 }

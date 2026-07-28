@@ -3,6 +3,7 @@ package io.github.shardkiht.rentdetective.semantic.tool;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.shardkiht.rentdetective.agent.loop.AgentContext;
 import io.github.shardkiht.rentdetective.agent.tool.Tool;
 import io.github.shardkiht.rentdetective.agent.tool.ToolResult;
 import io.github.shardkiht.rentdetective.rag.CaseVectorService;
@@ -10,6 +11,8 @@ import io.github.shardkiht.rentdetective.rag.SimilarCase;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 相似房源检索工具。通过 RAG 向量检索，返回 Top-5 相似案例。
@@ -52,7 +55,16 @@ public class SearchSimilarListingsTool implements Tool {
                 return ToolResult.fail("缺少参数：description 或 text");
             }
 
-            List<SimilarCase> cases = caseVectorService.search(text, 5);
+            // 从上下文获取评测集 excludeIds，避免泄题
+            Set<Long> excludeIdsLong = AgentContext.getExcludeIds();
+            Set<Integer> excludeIds = null;
+            if (excludeIdsLong != null && !excludeIdsLong.isEmpty()) {
+                excludeIds = excludeIdsLong.stream()
+                        .map(Long::intValue)
+                        .collect(Collectors.toSet());
+            }
+
+            List<SimilarCase> cases = caseVectorService.search(text, 5, null, excludeIds);
             String json = OBJECT_MAPPER.writeValueAsString(cases);
             return ToolResult.ok(json);
         } catch (JsonProcessingException e) {

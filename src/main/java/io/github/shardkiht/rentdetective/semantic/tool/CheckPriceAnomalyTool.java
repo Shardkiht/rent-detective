@@ -2,6 +2,7 @@ package io.github.shardkiht.rentdetective.semantic.tool;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.shardkiht.rentdetective.agent.loop.AgentContext;
 import io.github.shardkiht.rentdetective.agent.tool.Tool;
 import io.github.shardkiht.rentdetective.agent.tool.ToolResult;
 import io.github.shardkiht.rentdetective.app.entity.Listing;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 价格异常检测工具（相似案例比较法）。
@@ -82,8 +85,17 @@ public class CheckPriceAnomalyTool implements Tool {
                                 "缺少描述文本，无法进行相似案例检索")));
             }
 
-            // 向量检索 top-10 相似案例
-            List<SimilarCase> cases = caseVectorService.search(searchText, 10);
+            // 从上下文获取评测集 excludeIds，避免泄题
+            Set<Long> excludeIdsLong = AgentContext.getExcludeIds();
+            Set<Integer> excludeIds = null;
+            if (excludeIdsLong != null && !excludeIdsLong.isEmpty()) {
+                excludeIds = excludeIdsLong.stream()
+                        .map(Long::intValue)
+                        .collect(Collectors.toSet());
+            }
+
+            // 向量检索 top-10 相似案例（排除评测集 ID）
+            List<SimilarCase> cases = caseVectorService.search(searchText, 10, null, excludeIds);
 
             // 过滤：相似度 > 阈值 且 有有效价格
             List<Double> comparablePrices = new ArrayList<>();
