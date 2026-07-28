@@ -1,7 +1,7 @@
 package io.github.shardkiht.rentdetective.app.service;
 
-import io.github.shardkiht.rentdetective.app.entity.Listing;
-import io.github.shardkiht.rentdetective.app.mapper.ListingMapper;
+import io.github.shardkiht.rentdetective.domain.entity.Listing;
+import io.github.shardkiht.rentdetective.domain.mapper.ListingMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,10 +18,6 @@ public class ListingService {
 
     public List<Listing> list() {
         return listingMapper.selectList(null);
-    }
-
-    public Listing findById(Long id) {
-        return listingMapper.selectById(id);
     }
 
     /**
@@ -64,7 +60,6 @@ public class ListingService {
     /**
      * 仅作无 eval_group 列时的兆底，金标准以 CSV eval_group 列为准。
      */
-    @Deprecated
     private static String computeEvalGroup(String riskTags) {
         if (riskTags == null) {
             return "normal";

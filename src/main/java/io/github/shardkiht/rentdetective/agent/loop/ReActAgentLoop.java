@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.shardkiht.rentdetective.agent.report.EvidenceChainReport;
 import io.github.shardkiht.rentdetective.agent.tool.ToolRegistry;
 import io.github.shardkiht.rentdetective.agent.tool.ToolResult;
-import io.github.shardkiht.rentdetective.app.entity.Listing;
+import io.github.shardkiht.rentdetective.domain.entity.Listing;
 import io.github.shardkiht.rentdetective.llm.ChatRequest;
 import io.github.shardkiht.rentdetective.llm.ChatResponse;
 import io.github.shardkiht.rentdetective.llm.Message;
@@ -51,10 +51,6 @@ public class ReActAgentLoop {
 
     public EvidenceChainReport investigateWithExclude(Listing listing, Set<Long> excludeIds) {
         return investigateInternal(listing, excludeIds, step -> {});
-    }
-
-    public EvidenceChainReport investigateWithExclude(Listing listing, Set<Long> excludeIds, Consumer<AgentStep> onStep) {
-        return investigateInternal(listing, excludeIds, onStep);
     }
 
     /** 高风险结论至少需要 2 个不同工具交叉验证 */

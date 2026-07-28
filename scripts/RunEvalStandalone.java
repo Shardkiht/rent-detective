@@ -1,12 +1,12 @@
-import io.github.shardkiht.rentdetective.app.entity.Listing;
-import io.github.shardkiht.rentdetective.app.eval.JudgeUtils;
-import io.github.shardkiht.rentdetective.semantic.engine.*;
-import io.github.shardkiht.rentdetective.semantic.eval.*;
-import io.github.shardkiht.rentdetective.semantic.pricing.PriceExtractor;
-import io.github.shardkiht.rentdetective.semantic.relation.*;
-import io.github.shardkiht.rentdetective.semantic.rule.*;
-import io.github.shardkiht.rentdetective.semantic.rule.matcher.*;
 
+import io.github.shardkiht.rentdetective.domain.entity.Listing;
+import io.github.shardkiht.rentdetective.eval.judge.JudgeUtils;
+import io.github.shardkiht.rentdetective.eval.runner.EvalReport;
+import io.github.shardkiht.rentdetective.rules.engine.*;
+import io.github.shardkiht.rentdetective.rules.matcher.*;
+import io.github.shardkiht.rentdetective.rules.pricing.PriceExtractor;
+import io.github.shardkiht.rentdetective.rules.relation.*;
+import io.github.shardkiht.rentdetective.rules.*;
 import java.lang.reflect.Field;
 import java.io.*;
 import java.nio.charset.StandardCharsets;

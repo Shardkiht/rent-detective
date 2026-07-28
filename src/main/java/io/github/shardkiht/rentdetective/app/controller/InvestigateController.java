@@ -1,9 +1,8 @@
 package io.github.shardkiht.rentdetective.app.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.shardkiht.rentdetective.agent.loop.AgentStep;
 import io.github.shardkiht.rentdetective.agent.report.EvidenceChainReport;
-import io.github.shardkiht.rentdetective.app.entity.Listing;
+import io.github.shardkiht.rentdetective.domain.entity.Listing;
 import io.github.shardkiht.rentdetective.app.service.InvestigationService;
 import io.github.shardkiht.rentdetective.rag.CaseVectorService;
 import io.github.shardkiht.rentdetective.rag.SimilarCase;
@@ -52,7 +51,7 @@ public class InvestigateController {
     /**
      * POST /api/investigate — SSE 流式返回 Agent 调查轨迹与最终报告。
      * 请求体：{"title":"...","description":"...","price":1500,"phone":"..."}
-     *
+     * <p>
      * SSE 事件：
      * - step:   每个 AgentStep 完成时推送（JSON）
      * - report: 调查结束，推送最终 EvidenceChainReport（JSON）

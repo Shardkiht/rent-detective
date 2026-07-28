@@ -4,9 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.shardkiht.rentdetective.app.entity.Listing;
-import io.github.shardkiht.rentdetective.app.mapper.ListingMapper;
+import io.github.shardkiht.rentdetective.domain.entity.Listing;
+import io.github.shardkiht.rentdetective.domain.mapper.ListingMapper;
 import io.github.shardkiht.rentdetective.llm.api.EmbeddingClient;
+import io.github.shardkiht.rentdetective.rag.store.CaseVector;
+import io.github.shardkiht.rentdetective.rag.store.CaseVectorMapper;
+import io.github.shardkiht.rentdetective.rag.store.CosineSimilarity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -92,17 +95,6 @@ public class CaseVectorService {
         caseVectorMapper.delete(null);
         log.info("已清空 case_vectors 表，开始重新嵌入...");
         embedAll();
-    }
-
-    /**
-     * Top-K 检索：输入文本 → 向量化 → 全表余弦 → 排序取 Top-K → 关联 listings 获取元数据。
-     *
-     * @param text 查询文本
-     * @param k    返回数量
-     * @return 按相似度降序的相似案例列表
-     */
-    public List<SimilarCase> search(String text, int k) {
-        return search(text, k, null);
     }
 
     /**

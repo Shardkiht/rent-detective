@@ -1,6 +1,6 @@
 package io.github.shardkiht.rentdetective.app.controller;
 
-import io.github.shardkiht.rentdetective.app.entity.Listing;
+import io.github.shardkiht.rentdetective.domain.entity.Listing;
 import io.github.shardkiht.rentdetective.app.service.ListingService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;

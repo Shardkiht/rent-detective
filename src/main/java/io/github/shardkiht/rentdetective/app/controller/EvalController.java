@@ -1,10 +1,10 @@
 package io.github.shardkiht.rentdetective.app.controller;
 
-import io.github.shardkiht.rentdetective.app.eval.ComparisonEvalService;
-import io.github.shardkiht.rentdetective.app.eval.ComparisonReport;
-import io.github.shardkiht.rentdetective.app.service.EvalService;
+import io.github.shardkiht.rentdetective.eval.compare.ComparisonEvalService;
+import io.github.shardkiht.rentdetective.eval.compare.ComparisonReport;
+import io.github.shardkiht.rentdetective.eval.runner.EvalRunner;
 import io.github.shardkiht.rentdetective.rag.CaseVectorService;
-import io.github.shardkiht.rentdetective.semantic.eval.EvalReport;
+import io.github.shardkiht.rentdetective.eval.runner.EvalReport;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,12 +16,12 @@ import java.util.stream.Stream;
 @RequestMapping("/api/eval")
 public class EvalController {
 
-    private final EvalService evalService;
+    private final EvalRunner evalRunner;
     private final ComparisonEvalService comparisonEvalService;
     private final CaseVectorService caseVectorService;
 
-    public EvalController(EvalService evalService, ComparisonEvalService comparisonEvalService, CaseVectorService caseVectorService) {
-        this.evalService = evalService;
+    public EvalController(EvalRunner evalRunner, ComparisonEvalService comparisonEvalService, CaseVectorService caseVectorService) {
+        this.evalRunner = evalRunner;
         this.comparisonEvalService = comparisonEvalService;
         this.caseVectorService = caseVectorService;
     }
@@ -52,7 +52,7 @@ public class EvalController {
     @GetMapping("/rule-csv")
     public List<EvalReport> evalFromCsv(
             @RequestParam(required = false) String csvPath) throws Exception {
-        return evalService.runEval(csvPath);
+        return evalRunner.run(csvPath);
     }
 
     /**

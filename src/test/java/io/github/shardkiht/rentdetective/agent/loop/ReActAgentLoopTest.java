@@ -3,7 +3,7 @@ package io.github.shardkiht.rentdetective.agent.loop;
 import io.github.shardkiht.rentdetective.agent.report.EvidenceChainReport;
 import io.github.shardkiht.rentdetective.agent.tool.ToolRegistry;
 import io.github.shardkiht.rentdetective.agent.tool.ToolResult;
-import io.github.shardkiht.rentdetective.app.entity.Listing;
+import io.github.shardkiht.rentdetective.domain.entity.Listing;
 import io.github.shardkiht.rentdetective.llm.ChatResponse;
 import io.github.shardkiht.rentdetective.llm.api.LLMClient;
 import org.junit.jupiter.api.BeforeEach;

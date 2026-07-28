@@ -8,11 +8,9 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication(scanBasePackages = "io.github.shardkiht.rentdetective")
 @EnableAsync
 @MapperScan({
-        "io.github.shardkiht.rentdetective.app.mapper",
-        "io.github.shardkiht.rentdetective.app.eval.mapper",
+        "io.github.shardkiht.rentdetective.domain.mapper",
         "io.github.shardkiht.rentdetective.rag",
-        "io.github.shardkiht.rentdetective.semantic.mapper",
-        "io.github.shardkiht.rentdetective.semantic.relation"
+        "io.github.shardkiht.rentdetective.rules.relation"
 })
 public class RentDetectiveApplication {
 

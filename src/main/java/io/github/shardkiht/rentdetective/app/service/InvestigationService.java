@@ -3,8 +3,7 @@ package io.github.shardkiht.rentdetective.app.service;
 import io.github.shardkiht.rentdetective.agent.loop.AgentStep;
 import io.github.shardkiht.rentdetective.agent.loop.ReActAgentLoop;
 import io.github.shardkiht.rentdetective.agent.report.EvidenceChainReport;
-import io.github.shardkiht.rentdetective.app.entity.Listing;
-import io.github.shardkiht.rentdetective.app.mapper.ListingMapper;
+import io.github.shardkiht.rentdetective.domain.entity.Listing;
 import org.springframework.stereotype.Service;
 
 import java.util.function.Consumer;
@@ -17,22 +16,9 @@ import java.util.function.Consumer;
 public class InvestigationService {
 
     private final ReActAgentLoop agentLoop;
-    private final ListingMapper listingMapper;
 
-    public InvestigationService(ReActAgentLoop agentLoop, ListingMapper listingMapper) {
+    public InvestigationService(ReActAgentLoop agentLoop) {
         this.agentLoop = agentLoop;
-        this.listingMapper = listingMapper;
-    }
-
-    /**
-     * 根据 listingId 从数据库查询并执行调查（无回调）。
-     */
-    public EvidenceChainReport investigate(Long listingId) {
-        Listing listing = listingMapper.selectById(listingId);
-        if (listing == null) {
-            throw new IllegalArgumentException("Listing not found: " + listingId);
-        }
-        return agentLoop.investigate(listing);
     }
 
     /**

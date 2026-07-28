@@ -1,5 +1,6 @@
 package io.github.shardkiht.rentdetective.rag;
 
+import io.github.shardkiht.rentdetective.rag.store.CosineSimilarity;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
