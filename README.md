@@ -63,7 +63,7 @@ NOT_LISTING）与带证据链的调查报告。
 | HTTP      | OkHttp                                                                                             | LLM 流式调用                              |
 | 向量      | MySQL JSON 列存向量 + 应用层余弦相似度                                                             | 百级数据量，不引入专用向量数据库          |
 
-**明确不用**：Spring AI / LangChain4j（Agent 循环手写是项目核心）、Drools 等规则引擎框架（17 条规则手写 Matcher
+**明确不用**：Spring AI / LangChain4j（Agent 循环手写是项目核心）、Drools 等规则引擎框架（16 条规则手写 Matcher
 更直白）、Milvus/ES（数据量不匹配）。
 
 ---
