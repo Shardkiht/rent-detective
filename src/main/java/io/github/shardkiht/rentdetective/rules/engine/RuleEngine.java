@@ -3,7 +3,6 @@ package io.github.shardkiht.rentdetective.rules.engine;
 import io.github.shardkiht.rentdetective.domain.entity.ScamRule;
 import io.github.shardkiht.rentdetective.rules.relation.RelationRuleService;
 import io.github.shardkiht.rentdetective.rules.ScamRuleRegistry;
-import io.github.shardkiht.rentdetective.rules.matcher.RuleHit;
 import io.github.shardkiht.rentdetective.rules.matcher.RuleMatcher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

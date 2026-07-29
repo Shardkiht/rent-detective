@@ -6,7 +6,7 @@
 多工具调查（相似案例检索、价格异常检测、注入检测），输出风险判定（SAFE / SUSPICIOUS / REVIEW / INSUFFICIENT /
 NOT_LISTING）与带证据链的调查报告。
 
-**项目主线**：豆瓣小组采集 104 条真实房源 → 人工逐条标注（AI 预标注 + 人工复核，改判率 19%）→ 从标注中归纳 17 条文本规则 →
+**项目主线**：豆瓣小组采集 104 条真实房源 → 人工逐条标注（AI 预标注 + 人工复核，改判率 19%）→ 从标注中归纳 16 条文本规则 →
 手写 ReAct Agent + RAG 案例库 → 规则 / 纯 LLM / Agent+RAG 三方案同场评测。
 
 ---
@@ -54,16 +54,16 @@ NOT_LISTING）与带证据链的调查报告。
 
 ## 技术栈
 
-| 层        | 选型                                                             | 理由                                      |
-|-----------|------------------------------------------------------------------|-------------------------------------------|
-| 语言/框架 | Java 17 + Spring Boot 3.3.2                                      | 主力技术栈                                |
-| 持久层    | MyBatis-Plus + MySQL                                             | 关系规则需要 SQL 分组查询（联系方式聚类） |
-| 缓存      | Redis                                                            | 评测任务进度/状态                         |
-| LLM       | Ollama 本地（qwen3:1.7b + bge-m3）+ 百炼云端备用（qwen3.7-plus） | 本地零成本开发 + Fallback 降级            |
-| HTTP      | OkHttp                                                           | LLM 流式调用                              |
-| 向量      | MySQL JSON 列存向量 + 应用层余弦相似度                           | 百级数据量，不引入专用向量数据库          |
+| 层        | 选型                                                                                               | 理由                                      |
+|-----------|----------------------------------------------------------------------------------------------------|-------------------------------------------|
+| 语言/框架 | Java 17 + Spring Boot 3.3.2                                                                        | 主力技术栈                                |
+| 持久层    | MyBatis-Plus + MySQL                                                                               | 关系规则需要 SQL 分组查询（联系方式聚类） |
+| 缓存      | Redis                                                                                              | 评测任务进度/状态                         |
+| LLM       | 硅基流动云端（DeepSeek-V3.1-Terminus + bge-large-zh-v1.5）+ Ollama 本地备用（qwen3:1.7b + bge-m3） | 云端主力 + 本地降级（当前已禁用本地降级） |
+| HTTP      | OkHttp                                                                                             | LLM 流式调用                              |
+| 向量      | MySQL JSON 列存向量 + 应用层余弦相似度                                                             | 百级数据量，不引入专用向量数据库          |
 
-**明确不用**：Spring AI / LangChain4j（Agent 循环手写是项目核心）、Drools 等规则引擎框架（17 条规则手写 Matcher
+**明确不用**：Spring AI / LangChain4j（Agent 循环手写是项目核心）、Drools 等规则引擎框架（16 条规则手写 Matcher
 更直白）、Milvus/ES（数据量不匹配）。
 
 ---
@@ -76,15 +76,15 @@ NOT_LISTING）与带证据链的调查报告。
 ├─────────────────────────────────────────────┤
 │ 平台层（通用骨架，无业务知识）                        │
 │  llm/     LLMClient + EmbeddingClient 抽象         │
-│           Ollama / OpenAI-Compatible / Fallback    │
+│           OpenAI-Compatible 云端主力 / Ollama 本地备用  │
 │  agent/   ReActAgentLoop：think-act-observe 循环   │
 │           括号计数 JSON 提取 / 工具超时兜底          │
 │           forceConclude 置信度封顶                  │
 │  rag/     CaseVectorService：向量化 + Top-K 检索   │
 │  eval/    三方案评测框架（共用 JudgeUtils）          │
 ├─────────────────────────────────────────────┤
-│ 规则层   规则引擎（三步顺序）+ 17 条 Matcher     │
-│  rules/  （16 启用 + 1 条中性/禁用）             │
+│ 规则层   规则引擎（三步顺序）+ 16 条 Matcher     │
+│  rules/  （15 启用 + 1 条中性/禁用）             │
 │             价格提取器 + 4 个 Agent 工具         │
 │             建议生成器（证据不足时的提示）        │
 ├─────────────────────────────────────────────┤
@@ -98,8 +98,8 @@ NOT_LISTING）与带证据链的调查报告。
 
 ## 规则体系
 
-17 条文本规则（16 启用 + 1 条中性/禁用）+ 2 条关系规则，全部从 104 条人工标注中归纳，每条规则在 `scam_rules.json` 中配置（ruleType/weight/note/触发案例
-id），改配置不改代码。
+16 条文本规则（15 启用 + 1 条中性/禁用）+ 2 条关系规则，全部从 104 条人工标注中归纳，每条规则在 `scam_rules.json`
+中配置（ruleType/weight/note/触发案例 id），改配置不改代码。
 
 ### 文本规则（按权重分档）
 
@@ -122,7 +122,6 @@ id），改配置不改代码。
 | sales_over_substance     | 卖点全在外部（周边景点/生活方式），房子本身信息为零     |
 | unverifiable_endorsement | "开发商自持"但不给品牌名，背书无法验证                  |
 | out_of_region_ip         | 发帖 IP 属地 ≠ 房源城市（杭州房源 IP 在广东/江苏/福建） |
-| marketing_tone           | "采光拉满""超治愈"小红书化营销腔                        |
 | contact_spam             | 同一电话在正文重复刷 ≥3 遍                              |
 
 **弱信号（0.1–0.3，单独不定性）**
@@ -151,9 +150,11 @@ id），改配置不改代码。
 
 ```
 第一步 not_listing   → 标题含"求租/找室友/值得嘛"且不含"有房" → NOT_LISTING
-第二步 insufficient  → 机械闸门（正文<5字 / 截断 / 正文<30字且无联系方式
-                        / 核心信息缺失≥2且正文<60字）→ INSUFFICIENT + 提示建议
-第三步 加权打分      → 17条文本规则 + 2条关系规则求和
+第二步 insufficient  → 机械闸门（正文<5字 / 截断 / 正文<20字且无联系方式
+                        / 核心信息缺失≥2且正文<60字
+                        / 短正文+昵称含中介词+无价格
+                        / 中等正文<45字且无任何联系渠道）→ INSUFFICIENT + 提示建议
+第三步 加权打分      → 16条文本规则 + 2条关系规则求和
                         ≥0.6 SUSPICIOUS / 0.4-0.6 REVIEW / <0.4 SAFE
                         （正向规则减分不翻盘：≥2条强负面时 verifiable 只降到 REVIEW）
 ```
@@ -217,7 +218,7 @@ INSUFFICIENT_DATA。配套 prompt 约束："INSUFFICIENT_DATA 意为无法比价
 
 ### ② Prompt 不对称：只教风险信号，没教安全信号
 
-初版 prompt 列了 17 类风险信号，但一个字没教"什么算安全"，外加"结论必须基于工具证据"——而工具只能产出风险证据，没有任何工具能产出安全证据。Agent
+初版 prompt 列了 16 类风险信号，但一个字没教"什么算安全"，外加"结论必须基于工具证据"——而工具只能产出风险证据，没有任何工具能产出安全证据。Agent
 拿着一堆"没找到危险"的阴性结果，唯一合规出口只剩 REVIEW：8 条 safe 被推去 REVIEW/INSUFFICIENT，reviewRate 33.3%，normal 组仅
 26.7%。
 
@@ -250,19 +251,22 @@ INSUFFICIENT_DATA。配套 prompt 约束："INSUFFICIENT_DATA 意为无法比价
 io.github.shardkiht.rentdetective
 ├── llm/
 │   ├── api/          LLMClient / EmbeddingClient 接口 + 消息模型
-│   └── impl/         Ollama / OpenAiCompatible / Fallback（主备降级）
+│   ├── impl/         OpenAiCompatible 云端主力 / Ollama 本地备用（降级已禁用）
+│   └── 模型类        ChatRequest / ChatResponse / Message / ToolSchema / LLMException
 ├── agent/
 │   ├── loop/         ReActAgentLoop / AgentLoopConstants
 │   ├── report/       EvidenceChainReport
 │   └── tool/         Tool / ToolRegistry / 4 个工具实现
 ├── rag/
 │   ├── store/        CaseVector / CaseVectorMapper / CosineSimilarity / VectorUtils
-│   └── CaseVectorService / SimilarCase
+│   ├── CaseVectorService / SimilarCase
+│   └── EmbedStartupRunner（启动时自动向量嵌入）
 ├── rules/
-│   ├── engine/       RuleEngine / Verdict / EngineResult / AdviceGenerator / ListingContext
-│   ├── matcher/      17 个 Matcher（16 启用 + 1 条中性/禁用）
-│   ├── pricing/      PriceExtractor（防"2km"误提取为 2000 元；多档报价不填单一值）
-│   └── relation/     关系规则：联系方式聚类 / 同号不同价
+│   ├── engine/       RuleEngine / Verdict / EngineResult / AdviceGenerator / ListingContext / RuleHit
+│   ├── matcher/      16 个 Matcher + RuleMatcher 接口
+│   ├── pricing/      PriceExtractor + PriceExtraction（防"2km"误提取为 2000 元；多档报价不填单一值）
+│   ├── relation/     关系规则：联系方式聚类 / 同号不同价
+│   └── ScamRuleRegistry（从 scam_rules.json 加载规则配置）
 ├── domain/
 │   ├── entity/       Listing / ScamRule 领域实体
 │   └── mapper/       MyBatis Mapper（ListingMapper）
@@ -272,14 +276,15 @@ io.github.shardkiht.rentdetective
 │   └── runner/       EvalRunner（规则方案 CSV 评测）
 └── app/
     ├── controller/    REST / SSE 接口
-    └── service/      InvestigationService / ListingService
+    ├── service/      InvestigationService / ListingService
+    └── task/         InvestigationTaskExecutor（异步调查任务执行）
 ```
 
 ---
 
 ## 快速开始
 
-前置：Java 17、MySQL、Redis、本地 Ollama（`qwen3:1.7b` + `bge-m3`）
+前置：Java 17、MySQL、Redis、硅基流动 API Key（`api.siliconflow.cn`）
 
 ```bash
 # 1. 建表（listings / case_vectors / scam_rule）

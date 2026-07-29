@@ -1,4 +1,4 @@
-package io.github.shardkiht.rentdetective.rules.matcher;
+package io.github.shardkiht.rentdetective.rules.engine;
 
 /**
  * 规则匹配命中结果。

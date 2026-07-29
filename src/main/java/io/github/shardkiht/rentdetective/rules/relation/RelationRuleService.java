@@ -1,6 +1,6 @@
 package io.github.shardkiht.rentdetective.rules.relation;
 
-import io.github.shardkiht.rentdetective.rules.matcher.RuleHit;
+import io.github.shardkiht.rentdetective.rules.engine.RuleHit;
 import org.springframework.stereotype.Service;
 
 import java.util.*;

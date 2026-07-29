@@ -1,6 +1,7 @@
 package io.github.shardkiht.rentdetective.rules.matcher;
 
 import io.github.shardkiht.rentdetective.rules.engine.ListingContext;
+import io.github.shardkiht.rentdetective.rules.engine.RuleHit;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;

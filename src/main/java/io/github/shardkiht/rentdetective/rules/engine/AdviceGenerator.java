@@ -1,6 +1,5 @@
 package io.github.shardkiht.rentdetective.rules.engine;
 
-import io.github.shardkiht.rentdetective.rules.matcher.RuleHit;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

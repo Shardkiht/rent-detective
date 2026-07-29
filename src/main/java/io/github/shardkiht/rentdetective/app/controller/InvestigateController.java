@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
 
 /**
  * 房源调查 SSE 接口。
- * Agent 循环手写，工具可插拔；识坑规则来自人工标注，在 semantic 包。
+ * Agent 循环手写，工具可插拔；识坑规则来自人工标注，在 rules 包。
  */
 @RestController
 @RequestMapping("/api/investigate")

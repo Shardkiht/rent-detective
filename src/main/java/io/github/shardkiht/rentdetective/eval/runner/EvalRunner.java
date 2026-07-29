@@ -6,7 +6,7 @@ import io.github.shardkiht.rentdetective.rules.engine.EngineResult;
 import io.github.shardkiht.rentdetective.rules.engine.ListingContext;
 import io.github.shardkiht.rentdetective.rules.engine.RuleEngine;
 import io.github.shardkiht.rentdetective.rules.pricing.PriceExtractor;
-import io.github.shardkiht.rentdetective.rules.matcher.RuleHit;
+import io.github.shardkiht.rentdetective.rules.engine.RuleHit;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;

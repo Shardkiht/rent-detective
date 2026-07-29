@@ -31,3 +31,4 @@ rentdetective:
       base-url: https://api.siliconflow.cn/v1
       api-key: ""
       model: deepseek-ai/DeepSeek-V4-Flash
+      embedding-model: BAAI/bge-large-zh-v1.5
