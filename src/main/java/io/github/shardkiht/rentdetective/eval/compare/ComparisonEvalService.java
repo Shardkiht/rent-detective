@@ -221,10 +221,8 @@ public class ComparisonEvalService {
                 ));
             }
 
-            if (processed % 10 == 0) {
-                log.info("[{}] 进度 {}/{}", strategy, processed, listings.size());
-                progressMap.put(strategy, new EvalProgress(Status.RUNNING, processed, listings.size(), null, null));
-            }
+            log.info("[{}] 进度 {}/{}", strategy, processed, listings.size());
+            progressMap.put(strategy, new EvalProgress(Status.RUNNING, processed, listings.size(), null, null));
         }
 
         log.info("[{}] 评测完成", strategy);

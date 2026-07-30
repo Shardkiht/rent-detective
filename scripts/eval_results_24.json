@@ -1,0 +1,132 @@
+{
+  "evalDate": "2026-07-30",
+  "listingIds": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,21,29,30,35,41,43,44],
+  "total": 24,
+  "strategies": {
+    "rule": {
+      "strategy": "rule",
+      "total": 24,
+      "correct": 20,
+      "overallAccuracy": 0.8333333333333334,
+      "groups": [
+        {
+          "groupName": "normal",
+          "total": 15,
+          "correct": 11,
+          "accuracy": 0.7333333333333333,
+          "reviewRate": 0.0,
+          "misCases": [
+            {"listingId": 8,  "humanLabel": "suspicious", "predicted": "SAFE",   "titleSnippet": "下沙个人转租一室一厅15张💰可养宠物"},
+            {"listingId": 12, "humanLabel": "suspicious", "predicted": "REVIEW", "titleSnippet": "滨江萧山｜5号线通惠中路A口零距离，全女生主卧出租"},
+            {"listingId": 14, "humanLabel": "suspicious", "predicted": "SAFE",   "titleSnippet": "滨江萧山｜长江小区朝南主卧内卫1.85K近网易"},
+            {"listingId": 15, "humanLabel": "suspicious", "predicted": "SAFE",   "titleSnippet": "西湖区19号线五联站地铁口有房出租"}
+          ]
+        },
+        {
+          "groupName": "insufficient",
+          "total": 8,
+          "correct": 8,
+          "accuracy": 1.0,
+          "reviewRate": 0.0,
+          "misCases": []
+        },
+        {
+          "groupName": "not_listing",
+          "total": 1,
+          "correct": 1,
+          "accuracy": 1.0,
+          "reviewRate": 0.0,
+          "misCases": []
+        }
+      ]
+    },
+    "agent": {
+      "strategy": "agent",
+      "total": 24,
+      "correct": 19,
+      "overallAccuracy": 0.7916666666666666,
+      "groups": [
+        {
+          "groupName": "normal",
+          "total": 15,
+          "correct": 13,
+          "accuracy": 0.8666666666666667,
+          "reviewRate": 0.0,
+          "misCases": [
+            {"listingId": 8,  "humanLabel": "suspicious", "predicted": "SAFE",        "titleSnippet": "下沙个人转租一室一厅15张💰可养宠物"},
+            {"listingId": 16, "humanLabel": "safe",       "predicted": "INSUFFICIENT", "titleSnippet": "西湖区｜下宁桥地铁口精装修两室 旁边海洋二所 学院路 学军 ..."}
+          ]
+        },
+        {
+          "groupName": "insufficient",
+          "total": 8,
+          "correct": 5,
+          "accuracy": 0.625,
+          "reviewRate": 0.0,
+          "misCases": [
+            {"listingId": 29, "humanLabel": "suspicious", "predicted": "SUSPICIOUS", "titleSnippet": "新天地三站直达，开发商自持整租一室带阳台 民水电 采光通风都号 都是实体墙200..."},
+            {"listingId": 35, "humanLabel": "suspicious", "predicted": "SUSPICIOUS", "titleSnippet": "下沙一室一厅转租呀，民水电包网包物业，看房可＋1886841631"},
+            {"listingId": 43, "humanLabel": "suspicious", "predicted": "SUSPICIOUS", "titleSnippet": "杭州无中介费租房、2号线5号线、大量好房!"}
+          ]
+        },
+        {
+          "groupName": "not_listing",
+          "total": 1,
+          "correct": 1,
+          "accuracy": 1.0,
+          "reviewRate": 0.0,
+          "misCases": []
+        }
+      ]
+    },
+    "llm": {
+      "strategy": "llm",
+      "total": 24,
+      "correct": 9,
+      "overallAccuracy": 0.375,
+      "groups": [
+        {
+          "groupName": "normal",
+          "total": 15,
+          "correct": 6,
+          "accuracy": 0.4,
+          "reviewRate": 0.0,
+          "misCases": [
+            {"listingId": 1,  "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "余杭区草荡苑小区，房东直租地铁19号线海创园站"},
+            {"listingId": 2,  "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "上城区｜九堡丰收时代 全女生朝南民用水电 1000"},
+            {"listingId": 3,  "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "拱墅区｜沈塘桥地铁口星河明苑好房出租"},
+            {"listingId": 4,  "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "西湖区三墩 近浙谷深蓝 西城博司 浙大紫金港附近单身公寓整租 1600元"},
+            {"listingId": 5,  "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "房东直租五联站口单间独卫1100，月付无中介费"},
+            {"listingId": 6,  "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "余杭区｜五号线金星港郦中心楼下，1500包物业，阳光房，采光..."},
+            {"listingId": 13, "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "西湖区｜山水人家朝南带阳台 全女生合租 蚂蚁金服天目里珀莱..."},
+            {"listingId": 14, "humanLabel": "suspicious", "predicted": "SAFE",       "titleSnippet": "滨江萧山｜长江小区朝南主卧内卫1.85K近网易"},
+            {"listingId": 16, "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "西湖区｜下宁桥地铁口精装修两室 旁边海洋二所 学院路 学军 ..."}
+          ]
+        },
+        {
+          "groupName": "insufficient",
+          "total": 8,
+          "correct": 2,
+          "accuracy": 0.25,
+          "reviewRate": 0.25,
+          "misCases": [
+            {"listingId": 11, "humanLabel": "safe",       "predicted": "SAFE",       "titleSnippet": "出租区｜【个人房源/房东直租】杭州临平，五洲路地铁口，3000+/月"},
+            {"listingId": 21, "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "杭州租房·钱塘区下沙·1200/月押一付一"},
+            {"listingId": 29, "humanLabel": "suspicious", "predicted": "SUSPICIOUS", "titleSnippet": "新天地三站直达，开发商自持整租一室带阳台 民水电 采光通风都号 都是实体墙200..."},
+            {"listingId": 30, "humanLabel": "safe",       "predicted": "SUSPICIOUS", "titleSnippet": "九堡 客运中心 丰收时代旁 昆盛肖邦 龙湖天街 一室一厅 朝南带阳台独卫  天..."},
+            {"listingId": 35, "humanLabel": "suspicious", "predicted": "SUSPICIOUS", "titleSnippet": "下沙一室一厅转租呀，民水电包网包物业，看房可＋1886841631"},
+            {"listingId": 43, "humanLabel": "suspicious", "predicted": "SUSPICIOUS", "titleSnippet": "杭州无中介费租房、2号线5号线、大量好房!"}
+          ]
+        },
+        {
+          "groupName": "not_listing",
+          "total": 1,
+          "correct": 1,
+          "accuracy": 1.0,
+          "reviewRate": 0.0,
+          "misCases": []
+        }
+      ]
+    }
+  }
+}
