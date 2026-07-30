@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 规则注册表。启动时从 classpath:scam_rules.json 加载规则并按 ruleType 建索引。
+ * 规则注册表。启动时从 classpath:data/scam_rules.json 加载规则并按 ruleType 建索引。
  * 规则来自 104 条人工标注，规则引擎为确定性打分。
  */
 @Component
@@ -24,7 +24,7 @@ public class ScamRuleRegistry {
     public void init() {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            ClassPathResource resource = new ClassPathResource("scam_rules.json");
+            ClassPathResource resource = new ClassPathResource("data/scam_rules.json");
             try (InputStream is = resource.getInputStream()) {
                 List<ScamRule> rules = mapper.readValue(is, new TypeReference<>() {
                 });
@@ -32,7 +32,7 @@ public class ScamRuleRegistry {
                         .collect(Collectors.toMap(ScamRule::getRuleType, r -> r, (a, b) -> a, LinkedHashMap::new));
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load scam_rules.json", e);
+            throw new RuntimeException("Failed to load data/scam_rules.json", e);
         }
     }
 

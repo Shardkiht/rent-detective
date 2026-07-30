@@ -99,7 +99,7 @@ NOT_LISTING）与带证据链的调查报告。
 ## 规则体系
 
 17 条文本规则（16 启用 + 1 条中性/禁用）+ 2 条关系规则，全部从 104 条人工标注中归纳，每条规则在 `scam_rules.json`
-中配置（ruleType/weight/note/触发案例 id），改配置不改代码。
+中配置（`data/scam_rules.json`：ruleType/weight/note/触发案例 id），改配置不改代码。
 
 ### 文本规则（按权重分档）
 
@@ -175,6 +175,7 @@ LLM 输出 Thought → Action(工具名) → Action Input(JSON)
 执行工具（10s 超时兜底）→ Observation 拼回上下文
     ↓ 最多 8 轮（maxSteps）
 Final Answer → forceConclude 置信度封顶 → 调查报告
+    ↓ 轻量 LLM 调用（≤50字）生成一句话摘要 → summary 字段
 ```
 
 ### 四个工具
@@ -266,7 +267,7 @@ io.github.shardkiht.rentdetective
 │   ├── matcher/      16 个 Matcher + RuleMatcher 接口
 │   ├── pricing/      PriceExtractor + PriceExtraction（防"2km"误提取为 2000 元；多档报价不填单一值）
 │   ├── relation/     关系规则：联系方式聚类 / 同号不同价
-│   └── ScamRuleRegistry（从 scam_rules.json 加载规则配置）
+│   └── ScamRuleRegistry（从 data/scam_rules.json 加载规则配置）
 ├── domain/
 │   ├── entity/       Listing / ScamRule 领域实体
 │   └── mapper/       MyBatis Mapper（ListingMapper）
@@ -276,8 +277,28 @@ io.github.shardkiht.rentdetective
 │   └── runner/       EvalRunner（规则方案 CSV 评测）
 └── app/
     ├── controller/    REST / SSE 接口
-    ├── service/      InvestigationService / ListingService
+    ├── service/      InvestigationService（注入 LLMClient 生成摘要） / ListingService
     └── task/         InvestigationTaskExecutor（异步调查任务执行）
+```
+
+### resources 目录结构
+
+```
+src/main/resources/
+├── application.yml              # Spring 主配置
+├── application-dev.yml          # dev 环境配置
+├── application-dev.yml.example  # dev 配置示例
+├── schema.sql                   # 建表 SQL
+├── static/
+│   └── index.html               # 前端页面
+├── data/                        # 业务数据
+│   ├── scam_rules.json          # 规则定义
+│   ├── case_library_vectors.json# 案例向量缓存
+│   └── listings_104.json        # 房源原始数据
+└── eval/                        # 评测数据
+    ├── 杭州租房_104条_评测终版.csv
+    ├── 案例库_80条.csv
+    └── 评测集_24条.csv
 ```
 
 ---
@@ -288,7 +309,7 @@ io.github.shardkiht.rentdetective
 
 ```bash
 # 1. 建表（listings / case_vectors / scam_rule）
-# 2. 导入标注数据（杭州租房_104条_评测终版.csv）
+# 2. 导入标注数据（src/main/resources/eval/杭州租房_104条_评测终版.csv）
 # 3. 启动（首次自动向量嵌入，rag.embed-on-startup=true）
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
@@ -303,6 +324,8 @@ curl "http://localhost:8080/api/eval/progress?strategy=agent"
 ```
 
 规则阈值：`application.yml` → `rule.threshold.suspicious: 0.6` / `rule.threshold.review: 0.4`。
+
+LLM 温度：`application-dev.yml` → `rentdetective.llm.openai-compatible.temperature: 0.0`（调用时可覆盖）。
 
 ---
 

@@ -32,8 +32,8 @@ for ids in MA_GROUPS.values():
     MA_IDS.update(ids)
 
 # 数据源
-CSV_PATH = Path(__file__).parent.parent / "src" / "main" / "resources" / "杭州租房_104条_评测终版.csv"
-OUTPUT_DIR = Path(__file__).parent.parent / "src" / "main" / "resources"
+CSV_PATH = Path(__file__).parent.parent / "src" / "main" / "resources" / "eval" / "杭州租房_104条_评测终版.csv"
+OUTPUT_DIR = Path(__file__).parent.parent / "src" / "main" / "resources" / "eval"
 
 CASE_LIB_PATH = OUTPUT_DIR / "案例库_80条.csv"
 EVAL_SET_PATH = OUTPUT_DIR / "评测集_24条.csv"

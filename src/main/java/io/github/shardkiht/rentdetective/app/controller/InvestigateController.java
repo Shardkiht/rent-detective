@@ -121,7 +121,10 @@ public class InvestigateController {
         root.put("trace", report.getTrace());
 
         Map<String, Object> reportBody = new LinkedHashMap<>();
-        reportBody.put("summary", "TODO: 文案由作者后续定");
+        String summary = report.getSummary();
+        if (summary != null && !summary.isBlank()) {
+            reportBody.put("summary", summary);
+        }
 
         List<Map<String, String>> evidenceList = new ArrayList<>();
         if (report.getEvidences() != null) {

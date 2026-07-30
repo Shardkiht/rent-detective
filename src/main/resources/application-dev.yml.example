@@ -32,3 +32,4 @@ rentdetective:
       api-key: ""
       model: deepseek-ai/DeepSeek-V4-Flash
       embedding-model: BAAI/bge-large-zh-v1.5
+      temperature: 0.0

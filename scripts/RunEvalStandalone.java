@@ -23,8 +23,8 @@ import java.util.*;
 public class RunEvalStandalone {
 
     public static void main(String[] args) throws Exception {
-        String evalCsvPath = args.length > 0 ? args[0] : "评测集_24条.csv";
-        String fullCsvPath = args.length > 1 ? args[1] : "杭州租房_104条_评测终版.csv";
+        String evalCsvPath = args.length > 0 ? args[0] : "eval/评测集_24条.csv";
+        String fullCsvPath = args.length > 1 ? args[1] : "eval/杭州租房_104条_评测终版.csv";
 
         System.out.println("=== RentDetective 规则引擎独立评测 ===");
         System.out.println("评测集: " + evalCsvPath);

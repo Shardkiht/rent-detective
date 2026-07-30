@@ -20,14 +20,17 @@ public class OpenAiCompatibleLLMClient implements LLMClient {
     private final String baseUrl;
     private final String apiKey;
     private final String model;
+    private final Double defaultTemperature;
 
     public OpenAiCompatibleLLMClient(
             @Value("${rentdetective.llm.openai-compatible.base-url}") String baseUrl,
             @Value("${rentdetective.llm.openai-compatible.api-key}") String apiKey,
-            @Value("${rentdetective.llm.openai-compatible.model}") String model) {
+            @Value("${rentdetective.llm.openai-compatible.model}") String model,
+            @Value("${rentdetective.llm.openai-compatible.temperature:0.0}") Double defaultTemperature) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.model = model;
+        this.defaultTemperature = defaultTemperature;
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(90, TimeUnit.SECONDS)
@@ -39,7 +42,9 @@ public class OpenAiCompatibleLLMClient implements LLMClient {
         try {
             ObjectNode body = mapper.createObjectNode();
             body.put("model", model);
-            body.put("temperature", request.temperature());
+            // 优先使用请求中的 temperature，否则用配置默认值
+            Double temperature = request.temperature() != null ? request.temperature() : defaultTemperature;
+            body.put("temperature", temperature);
 
             // DeepSeek V4 系列：关闭思考模式，节省 token
             if (model.contains("deepseek")) {

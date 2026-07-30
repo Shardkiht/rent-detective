@@ -15,6 +15,7 @@ public class EvidenceChainReport {
     private List<Evidence> evidences;
     private boolean converged;
     private List<AgentStep> trace;
+    private String summary;
 
     @Setter
     @Getter

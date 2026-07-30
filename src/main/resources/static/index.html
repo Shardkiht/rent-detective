@@ -3,278 +3,481 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>租房侦探 — Agent 调查工具</title>
+    <title>租房侦探 — RentDetective</title>
     <style>
+        :root {
+            --paper: #1e1e20;
+            --ink: #e8e6e1;
+            --ink-2: #a9a7a1;
+            --ink-3: #6e6c66;
+            --hairline: #333335;
+            --hairline-dark: #45454a;
+            --green: #4cc38a;
+            --red: #e5534b;
+            --orange: #d9a05b;
+            --mono: "SF Mono", "JetBrains Mono", Consolas, monospace;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; max-width: 860px; margin: 0 auto; }
-        h1 { color: #c0392b; margin-bottom: 0.3rem; font-size: 1.6rem; }
-        .subtitle { color: #777; font-size: 0.85rem; margin-bottom: 1.5rem; }
-        form { background: #fff; padding: 1.2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
-        label { display: block; font-weight: 600; margin-bottom: 0.2rem; font-size: 0.9rem; }
-        input, textarea { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; margin-bottom: 0.8rem; }
-        textarea { resize: vertical; min-height: 60px; }
-        button { background: #c0392b; color: #fff; border: none; padding: 0.6rem 1.6rem; border-radius: 4px; font-size: 0.95rem; cursor: pointer; }
-        button:hover { background: #a93226; }
-        button:disabled { background: #999; cursor: not-allowed; }
-        .section { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.2rem; margin-bottom: 1.5rem; }
-        .section h2 { font-size: 1rem; margin-bottom: 0.8rem; color: #555; }
-        #trace { max-height: 400px; overflow-y: auto; }
-        .step { padding: 0.5rem 0.7rem; border-left: 3px solid #3498db; background: #f9f9f9; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0; font-size: 0.85rem; }
-        .step.tool_call { border-left-color: #e67e22; }
-        .step.tool_result { border-left-color: #27ae60; }
-        .step.final_answer { border-left-color: #8e44ad; }
-        .step.complete { border-left-color: #27ae60; background: #eafaf1; font-weight: 600; }
-        .step .type { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; color: #888; }
-        .step .content { margin-top: 0.3rem; white-space: pre-wrap; word-break: break-word; }
-        .error { color: #c0392b; font-weight: 600; }
-        .hidden { display: none; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            min-height: 100vh;
+            padding: 4rem 1.5rem 5rem;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 780px; margin: 0 auto; }
 
-        /* 调查结论 */
-        .verdict { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.6rem; }
-        .verdict.safe { color: #27ae60; }
-        .verdict.risky { color: #c0392b; }
-        .verdict.uncertain { color: #e67e22; }
-        .summary { font-size: 0.9rem; color: #555; margin-bottom: 1rem; line-height: 1.5; }
+        /* ===== 头部 ===== */
+        .header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.6rem; }
+        h1 {
+            font-size: 1.9rem; font-weight: 800; letter-spacing: -0.01em;
+            display: flex; align-items: baseline; gap: 0.7rem;
+        }
+        h1 .en {
+            font-family: var(--mono), monospace; font-size: 0.75rem; font-weight: 500;
+            letter-spacing: 0.14em; color: var(--ink-3); text-transform: uppercase;
+        }
+        .header .no { font-family: var(--mono), monospace; font-size: 0.72rem; color: var(--ink-3); letter-spacing: 0.1em; }
+        .subtitle {
+            color: var(--ink-2); font-size: 0.88rem; line-height: 1.7;
+            padding-bottom: 1.6rem; margin-bottom: 2.2rem;
+            border-bottom: 1px solid var(--ink);
+        }
+        .subtitle strong { color: var(--ink); font-weight: 600; }
 
-        /* 证据表格 */
-        .evidence-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.5rem; }
-        .evidence-table th { background: #f0f0f0; text-align: left; padding: 0.5rem; font-weight: 600; border-bottom: 2px solid #ddd; }
-        .evidence-table td { padding: 0.5rem; border-bottom: 1px solid #eee; vertical-align: top; }
-        .evidence-table tr:last-child td { border-bottom: none; }
-        .evidence-table .type { font-weight: 600; color: #3498db; }
-        .evidence-table .type.case { color: #27ae60; }
-        .evidence-table .type.rule { color: #e67e22; }
+        /* ===== 分区（编号 + 发丝线） ===== */
+        .section { margin-bottom: 2.2rem; }
+        .section-head {
+            display: flex; align-items: baseline; gap: 0.8rem;
+            border-bottom: 1px solid var(--hairline-dark);
+            padding-bottom: 0.55rem; margin-bottom: 1.2rem;
+        }
+        .section-head .idx {
+            font-family: var(--mono), monospace; font-size: 0.72rem; font-weight: 500;
+            color: var(--ink-3); letter-spacing: 0.08em;
+        }
+        .section-head .name { font-size: 0.95rem; font-weight: 700; letter-spacing: 0.02em; }
+        .section-head .hint { margin-left: auto; font-size: 0.75rem; color: var(--ink-3); }
 
-        /* 相似案例 */
-        .similar-cases { margin-top: 1rem; }
-        .similar-case-item { padding: 0.5rem 0.7rem; border-left: 3px solid #9b59b6; background: #f9f5ff; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0; font-size: 0.85rem; }
-        .similar-case-item .score { font-weight: 700; color: #8e44ad; }
-        .similar-case-item .reason { color: #888; font-size: 0.8rem; }
+        /* ===== 表单 ===== */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; }
+        .form-grid .full { grid-column: 1 / -1; }
+        label {
+            display: block; font-size: 0.76rem; font-weight: 600;
+            letter-spacing: 0.06em; color: var(--ink-2);
+            margin-bottom: 0.4rem;
+        }
+        label .opt { font-weight: 400; color: var(--ink-3); }
+        input, textarea {
+            width: 100%; padding: 0.55rem 0;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--hairline-dark);
+            border-radius: 0;
+            font-size: 0.95rem; color: var(--ink);
+            margin-bottom: 1.3rem;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus { outline: none; border-bottom-color: var(--ink); }
+        input::placeholder, textarea::placeholder { color: #55534e; }
+        textarea { resize: vertical; min-height: 64px; line-height: 1.7; }
+        button {
+            background: var(--ink); color: var(--paper);
+            border: none; padding: 0.75rem 2.4rem;
+            border-radius: 2px;
+            font-size: 0.88rem; font-weight: 600; letter-spacing: 0.12em;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        button:hover { opacity: 0.82; }
+        button:disabled { background: #4a4845; color: #7a7873; cursor: not-allowed; opacity: 1; }
+
+        /* ===== 调查轨迹 ===== */
+        #trace { max-height: 420px; overflow-y: auto; }
+        #trace::-webkit-scrollbar { width: 4px; }
+        #trace::-webkit-scrollbar-thumb { background: var(--hairline-dark); }
+        .step {
+            display: grid;
+            grid-template-columns: 108px 1fr;
+            gap: 1rem;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid var(--hairline);
+            font-size: 0.86rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .step .type {
+            font-family: var(--mono), monospace; font-size: 0.68rem; font-weight: 600;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--ink-3); padding-top: 0.18rem;
+            word-break: break-all;
+        }
+        .step.tool_call .type { color: var(--orange); }
+        .step.tool_result .type { color: var(--green); }
+        .step.final_answer .type { color: var(--ink); }
+        .step.complete .type { color: var(--green); }
+        .step.complete .content { font-weight: 600; color: var(--ink); }
+        .step .content { white-space: pre-wrap; word-break: break-word; color: var(--ink-2); line-height: 1.7; }
+
+        /* ===== 调查报告 ===== */
+        .verdict-banner {
+            display: flex; align-items: center; gap: 0.8rem;
+            padding: 1rem 0;
+            border-top: 2px solid var(--ink);
+            border-bottom: 1px solid var(--hairline-dark);
+            margin-bottom: 1.2rem;
+            font-size: 1.25rem; font-weight: 800; letter-spacing: 0.01em;
+        }
+        .verdict-banner .mark {
+            font-family: var(--mono), monospace; font-size: 0.68rem; font-weight: 600;
+            letter-spacing: 0.1em; padding: 0.25rem 0.6rem;
+            border: 1px solid currentColor; border-radius: 2px;
+        }
+        .verdict-banner.safe { color: var(--green); }
+        .verdict-banner.risky { color: var(--red); }
+        .verdict-banner.uncertain { color: var(--orange); }
+        .summary { font-size: 0.92rem; color: var(--ink-2); margin-bottom: 1.4rem; line-height: 1.8; }
+
+        .report-h3 {
+            font-family: var(--mono), monospace; font-size: 0.7rem; font-weight: 600;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--ink-3); margin: 1.6rem 0 0.7rem;
+            padding-bottom: 0.4rem; border-bottom: 1px solid var(--hairline);
+        }
+
+        /* 证据表格——三线表 */
+        .evidence-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+        .evidence-table th {
+            text-align: left; padding: 0.5rem 0.7rem 0.5rem 0;
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+            color: var(--ink-3); text-transform: uppercase;
+            border-top: 1.5px solid var(--ink);
+            border-bottom: 1px solid var(--hairline-dark);
+        }
+        .evidence-table td {
+            padding: 0.55rem 0.7rem 0.55rem 0;
+            vertical-align: top; line-height: 1.65; color: var(--ink-2);
+            border-bottom: 1px solid var(--hairline);
+        }
+        .evidence-table tr:last-child td { border-bottom: 1px solid var(--hairline-dark); }
+        .tag {
+            font-family: var(--mono), monospace; font-size: 0.68rem; font-weight: 600;
+            letter-spacing: 0.06em; padding: 0.15rem 0.5rem;
+            border: 1px solid; border-radius: 2px; white-space: nowrap;
+        }
+        .tag.case { color: var(--green); border-color: var(--green); }
+        .tag.rule { color: var(--orange); border-color: var(--orange); }
 
         /* 报告内轨迹 */
-        .report-trace { margin-top: 1rem; }
-        .report-trace-item { padding: 0.5rem 0.7rem; border-left: 3px solid #3498db; background: #f9f9f9; margin-bottom: 0.4rem; border-radius: 0 4px 4px 0; font-size: 0.83rem; }
-        .report-trace-item.thought { border-left-color: #3498db; }
-        .report-trace-item.tool_call { border-left-color: #e67e22; }
-        .report-trace-item.tool_result { border-left-color: #27ae60; }
-        .report-trace-item.final_answer { border-left-color: #8e44ad; }
-        .report-trace-item .rt-type { font-weight: 700; text-transform: uppercase; font-size: 0.73rem; color: #888; }
-        .report-trace-item .rt-tool { color: #e67e22; font-weight: 600; font-size: 0.73rem; }
-        .report-trace-item .rt-content { margin-top: 0.25rem; white-space: pre-wrap; word-break: break-word; color: #444; }
+        .report-trace-item {
+            display: grid; grid-template-columns: 108px 1fr; gap: 1rem;
+            padding: 0.5rem 0; border-bottom: 1px solid var(--hairline);
+            font-size: 0.83rem;
+        }
+        .report-trace-item .rt-type {
+            font-family: var(--mono), monospace; font-size: 0.66rem; font-weight: 600;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--ink-3); padding-top: 0.15rem; word-break: break-all;
+        }
+        .report-trace-item.tool_call .rt-type { color: var(--orange); }
+        .report-trace-item.tool_result .rt-type { color: var(--green); }
+        .report-trace-item .rt-tool { color: var(--orange); }
+        .report-trace-item .rt-content { white-space: pre-wrap; word-break: break-word; color: var(--ink-2); line-height: 1.65; }
+
+        /* 相似案例 */
+        .similar-case-item {
+            display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;
+            padding: 0.6rem 0; border-bottom: 1px solid var(--hairline);
+            font-size: 0.86rem;
+        }
+        .similar-case-item .score {
+            font-family: var(--mono), monospace; font-weight: 700; font-size: 0.9rem;
+            color: var(--ink); font-variant-numeric: tabular-nums;
+        }
+        .similar-case-item .cid { color: var(--ink-2); }
+        .similar-case-item .reason { color: var(--ink-3); font-size: 0.8rem; }
+
+        .error { color: var(--red); font-weight: 600; }
+        .field-error { color: var(--red); font-size: 0.78rem; margin: -0.9rem 0 1.1rem; letter-spacing: 0.02em; }
+        input.invalid { border-bottom-color: var(--red); }
+        .hidden { display: none; }
+
+        .footer {
+            margin-top: 3.5rem; padding-top: 1rem;
+            border-top: 1px solid var(--hairline-dark);
+            display: flex; justify-content: space-between;
+            font-family: var(--mono), monospace; font-size: 0.68rem;
+            letter-spacing: 0.1em; color: var(--ink-3); text-transform: uppercase;
+        }
+
+        @media (max-width: 640px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .step, .report-trace-item { grid-template-columns: 1fr; gap: 0.2rem; }
+            body { padding: 2.5rem 1.1rem 3.5rem; }
+        }
     </style>
 </head>
 <body>
-    <h1>租房侦探</h1>
-    <p class="subtitle">Agent 循环手写，工具可插拔 — 输入房源信息，执行风险调查</p>
+<div class="container">
 
-    <form id="form">
-        <label for="title">标题</label>
-        <input id="title" name="title" required placeholder="如：精装修一居室 近地铁">
-        <label for="description">描述</label>
-        <textarea id="description" name="description" placeholder="房源详细描述..."></textarea>
-        <label for="price">价格（元/月）</label>
-        <input id="price" name="price" type="number" required placeholder="1500">
-        <label for="phone">联系电话</label>
-        <input id="phone" name="phone" placeholder="13800138000">
-        <button type="submit" id="submitBtn">开始调查</button>
+    <div class="header">
+        <h1>租房侦探 <span class="en">RentDetective</span></h1>
+        <span class="no">v1.0</span>
+    </div>
+    <p class="subtitle">手写 ReAct 循环 · 规则引擎 + RAG 案例库 · <strong>规则可解释，证据可追溯</strong> — 输入房源信息，执行风险调查</p>
+
+    <form id="form" class="section" novalidate>
+        <div class="section-head">
+            <span class="idx">01</span>
+            <span class="name">案件录入</span>
+            <span class="hint">POST /api/investigate</span>
+        </div>
+        <div class="form-grid">
+            <div class="full">
+                <label for="title">标题</label>
+                <input id="title" name="title" placeholder="如：精装修一居室 近地铁">
+                <div class="field-error hidden" id="titleError">请先填写房源标题</div>
+            </div>
+            <div class="full">
+                <label for="description">描述</label>
+                <textarea id="description" name="description" placeholder="房源详细描述..."></textarea>
+            </div>
+            <div>
+                <label for="price">价格（元/月）<span class="opt"> · 留空表示未知</span></label>
+                <input id="price" name="price" type="number" placeholder="1500">
+            </div>
+            <div>
+                <label for="phone">联系电话 <span class="opt">· 可选</span></label>
+                <input id="phone" name="phone" placeholder="13800138000">
+            </div>
+        </div>
+        <button type="submit" id="submitBtn">开始调查 →</button>
     </form>
 
     <div class="section hidden" id="traceSection">
-        <h2>调查轨迹</h2>
+        <div class="section-head">
+            <span class="idx">02</span>
+            <span class="name">调查轨迹</span>
+            <span class="hint">ReAct Loop · 实时流式输出</span>
+        </div>
         <div id="trace"></div>
     </div>
 
     <div class="section hidden" id="reportSection">
-        <h2>调查报告</h2>
+        <div class="section-head">
+            <span class="idx">03</span>
+            <span class="name">调查报告</span>
+            <span class="hint">证据链 · 可解释结论</span>
+        </div>
         <div id="report"></div>
     </div>
 
-    <script>
-        const form = document.getElementById('form');
-        const traceDiv = document.getElementById('trace');
-        const reportDiv = document.getElementById('report');
-        const traceSection = document.getElementById('traceSection');
-        const reportSection = document.getElementById('reportSection');
-        const submitBtn = document.getElementById('submitBtn');
+    <div class="footer">
+        <span>RentDetective</span>
+        <span>Rule-Based · Agentic · Explainable</span>
+    </div>
+</div>
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.textContent = '调查中...';
-            traceDiv.innerHTML = '';
-            reportDiv.innerHTML = '';
-            traceSection.classList.remove('hidden');
-            reportSection.classList.add('hidden');
+<script>
+    const form = document.getElementById('form');
+    const traceDiv = document.getElementById('trace');
+    const reportDiv = document.getElementById('report');
+    const traceSection = document.getElementById('traceSection');
+    const reportSection = document.getElementById('reportSection');
+    const submitBtn = document.getElementById('submitBtn');
 
-            const body = {
-                title: document.getElementById('title').value,
-                description: document.getElementById('description').value,
-                price: parseFloat(document.getElementById('price').value),
-                phone: document.getElementById('phone').value
-            };
+    /* 必填校验：原生气泡换成主题内联报错 */
+    const titleInput = document.getElementById('title');
+    const titleError = document.getElementById('titleError');
+    titleInput.addEventListener('input', () => {
+        titleInput.classList.remove('invalid');
+        titleError.classList.add('hidden');
+    });
 
-            try {
-                const resp = await fetch('/api/investigate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                const reader = resp.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                let eventType = '';
-                let dataLines = [];
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!titleInput.value.trim()) {
+            titleInput.classList.add('invalid');
+            titleError.classList.remove('hidden');
+            titleInput.focus();
+            return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = '调查中…';
+        traceDiv.innerHTML = '';
+        reportDiv.innerHTML = '';
+        traceSection.classList.remove('hidden');
+        reportSection.classList.add('hidden');
 
-                function processEvent() {
-                    if (dataLines.length > 0) {
-                        const data = dataLines.join('\n').trim();
-                        console.log('[SSE] event:', eventType, 'data:', data.substring(0, 120));
-                        try {
-                            if (eventType === 'step') appendStep(JSON.parse(data));
-                            else if (eventType === 'report') showReport(data);
-                            else if (eventType === 'error') showError(data);
-                        } catch (e) {
-                            console.warn('[SSE] parse error:', e, data.substring(0, 200));
-                        }
-                        dataLines = [];
-                        eventType = '';
-                    }
-                }
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value, { stream: true });
-                    console.log('[SSE] raw chunk:', JSON.stringify(chunk.substring(0, 200)));
-                    buffer += chunk;
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop();
-                    for (const line of lines) {
-                        if (line.startsWith('event:')) {
-                            eventType = line.slice(6).trim();
-                        } else if (line.startsWith('data:')) {
-                            dataLines.push(line.slice(5));
-                        } else if (line.trim() === '') {
-                            processEvent();
-                        }
-                    }
-                }
-                /* 流结束后处理残余 buffer */
-                if (buffer.trim()) {
-                    const remainLines = buffer.split('\n');
-                    for (const line of remainLines) {
-                        if (line.startsWith('event:')) eventType = line.slice(6).trim();
-                        else if (line.startsWith('data:')) dataLines.push(line.slice(5));
-                    }
-                }
-                processEvent();
-                /* 流结束 → 在轨迹末尾追加「调查完成」 */
-                appendStep({ type: 'complete', content: '调查完成' });
-            } catch (err) {
-                showError(err.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '开始调查';
-            }
-        });
-
-        function appendStep(step) {
-            const div = document.createElement('div');
-            div.className = 'step ' + (step.type || '');
-            const label = step.toolName ? step.type + ' [' + step.toolName + ']' : step.type;
-            div.innerHTML = '<div class="type">' + label + '</div><div class="content">' + escapeHtml(step.content || '') + '</div>';
-            traceDiv.appendChild(div);
-            traceDiv.scrollTop = traceDiv.scrollHeight;
+        const priceRaw = document.getElementById('price').value.trim();
+        const body = {
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value,
+            phone: document.getElementById('phone').value
+        };
+        if (priceRaw !== '') {
+            body.price = parseFloat(priceRaw);
         }
 
-        function showReport(json) {
-            reportSection.classList.remove('hidden');
-            try {
-                const report = JSON.parse(json);
-                reportDiv.innerHTML = renderReport(report);
-            } catch {
-                reportDiv.textContent = json;
+        try {
+            const resp = await fetch('/api/investigate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let eventType = '';
+            let dataLines = [];
+
+            function processEvent() {
+                if (dataLines.length > 0) {
+                    const data = dataLines.join('\n').trim();
+                    try {
+                        if (eventType === 'step') appendStep(JSON.parse(data));
+                        else if (eventType === 'report') showReport(data);
+                        else if (eventType === 'error') showError(data);
+                    } catch (e) {
+                        console.warn('[SSE] parse error:', e, data.substring(0, 200));
+                    }
+                    dataLines = [];
+                    eventType = '';
+                }
+            }
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (const line of lines) {
+                    if (line.startsWith('event:')) {
+                        eventType = line.slice(6).trim();
+                    } else if (line.startsWith('data:')) {
+                        dataLines.push(line.slice(5));
+                    } else if (line.trim() === '') {
+                        processEvent();
+                    }
+                }
+            }
+            /* 流结束后处理残余 buffer */
+            if (buffer.trim()) {
+                const remainLines = buffer.split('\n');
+                for (const line of remainLines) {
+                    if (line.startsWith('event:')) eventType = line.slice(6).trim();
+                    else if (line.startsWith('data:')) dataLines.push(line.slice(5));
+                }
+            }
+            processEvent();
+            /* 流结束 → 在轨迹末尾追加「调查完成」 */
+            appendStep({ type: 'complete', content: '调查完成' });
+        } catch (err) {
+            showError(err.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '开始调查 →';
+        }
+    });
+
+    function appendStep(step) {
+        const div = document.createElement('div');
+        div.className = 'step ' + (step.type || '');
+        const label = step.toolName ? step.type + ' [' + step.toolName + ']' : step.type;
+        div.innerHTML = '<div class="type">' + label + '</div><div class="content">' + escapeHtml(step.content || '') + '</div>';
+        traceDiv.appendChild(div);
+        traceDiv.scrollTop = traceDiv.scrollHeight;
+    }
+
+    function showReport(json) {
+        reportSection.classList.remove('hidden');
+        try {
+            const report = JSON.parse(json);
+            reportDiv.innerHTML = renderReport(report);
+        } catch {
+            reportDiv.textContent = json;
+        }
+    }
+
+    function renderReport(r) {
+        let html = '';
+        const report = r.report || {};
+
+        /* 调查结论 */
+        const verdict = r.verdict || '未知';
+        const verdictClass = /安全|低风险|通过|SAFE/i.test(verdict) ? 'safe' : /高风险|危险|欺诈|SUSPICIOUS|REVIEW/i.test(verdict) ? 'risky' : 'uncertain';
+        const mark = verdictClass === 'safe' ? 'SAFE' : verdictClass === 'risky' ? 'RISK' : 'REVIEW';
+        html += '<div class="verdict-banner ' + verdictClass + '"><span class="mark">' + mark + '</span>结论：' + escapeHtml(verdict) + '</div>';
+
+        /* 摘要 */
+        if (report.summary) {
+            html += '<div class="summary">' + escapeHtml(report.summary) + '</div>';
+        }
+
+        /* 证据链表格 */
+        const evidence = report.evidence || [];
+        if (evidence.length > 0) {
+            html += '<div class="report-h3">证据链 Evidence</div>';
+            html += '<table class="evidence-table">';
+            html += '<thead><tr><th style="width:100px;">类型</th><th>详情</th></tr></thead>';
+            html += '<tbody>';
+            for (const ev of evidence) {
+                const typeClass = ev.type === 'case' ? 'case' : 'rule';
+                html += '<tr>';
+                html += '<td><span class="tag ' + typeClass + '">' + escapeHtml(ev.type || '') + '</span></td>';
+                html += '<td>' + escapeHtml(ev.detail || '') + '</td>';
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+        }
+
+        /* 调查轨迹（报告内） */
+        const trace = r.trace || [];
+        if (trace.length > 0) {
+            html += '<div class="report-h3">调查轨迹 Trace</div>';
+            for (const step of trace) {
+                const stepType = step.type || '';
+                html += '<div class="report-trace-item ' + stepType + '">';
+                let label = stepType;
+                if (step.toolName) {
+                    label += ' <span class="rt-tool">[' + escapeHtml(step.toolName) + ']</span>';
+                }
+                html += '<div class="rt-type">' + label + '</div>';
+                html += '<div class="rt-content">' + escapeHtml(step.content || '') + '</div>';
+                html += '</div>';
             }
         }
 
-        function renderReport(r) {
-            let html = '';
-            const report = r.report || {};
-
-            /* 调查结论 */
-            const verdict = r.verdict || '未知';
-            const verdictClass = /安全|低风险|通过|SAFE/i.test(verdict) ? 'safe' : /高风险|危险|欺诈|SUSPICIOUS|REVIEW/i.test(verdict) ? 'risky' : 'uncertain';
-            html += '<div class="verdict ' + verdictClass + '">结论：' + escapeHtml(verdict) + '</div>';
-
-            /* 摘要 */
-            if (report.summary) {
-                html += '<div class="summary">' + escapeHtml(report.summary) + '</div>';
-            }
-
-            /* 证据链表格 */
-            const evidence = report.evidence || [];
-            if (evidence.length > 0) {
-                html += '<h3 style="font-size:0.9rem;color:#555;margin-bottom:0.4rem;">证据链</h3>';
-                html += '<table class="evidence-table">';
-                html += '<thead><tr><th>类型</th><th>详情</th></tr></thead>';
-                html += '<tbody>';
-                for (const ev of evidence) {
-                    const typeClass = ev.type === 'case' ? 'case' : 'rule';
-                    html += '<tr>';
-                    html += '<td class="type ' + typeClass + '">' + escapeHtml(ev.type || '') + '</td>';
-                    html += '<td>' + escapeHtml(ev.detail || '') + '</td>';
-                    html += '</tr>';
-                }
-                html += '</tbody></table>';
-            }
-
-            /* 调查轨迹（报告内） */
-            const trace = r.trace || [];
-            if (trace.length > 0) {
-                html += '<div class="report-trace">';
-                html += '<h3 style="font-size:0.9rem;color:#555;margin-bottom:0.4rem;">调查轨迹</h3>';
-                for (const step of trace) {
-                    const stepType = step.type || '';
-                    html += '<div class="report-trace-item ' + stepType + '">';
-                    let label = stepType;
-                    if (step.toolName) {
-                        label += ' <span class="rt-tool">[' + escapeHtml(step.toolName) + ']</span>';
-                    }
-                    html += '<div class="rt-type">' + label + '</div>';
-                    html += '<div class="rt-content">' + escapeHtml(step.content || '') + '</div>';
-                    html += '</div>';
+        /* 相似案例 */
+        const similarCases = report.similarCases || [];
+        if (similarCases.length > 0) {
+            html += '<div class="report-h3">相似案例 Similar Cases</div>';
+            for (const sc of similarCases) {
+                const pct = Math.round(sc.score * 100);
+                html += '<div class="similar-case-item">';
+                html += '<span class="score">' + pct + '%</span>';
+                html += '<span class="cid">案例 #' + escapeHtml(String(sc.listingId)) + '</span>';
+                if (sc.reason) {
+                    html += '<span class="reason">' + escapeHtml(sc.reason) + '</span>';
                 }
                 html += '</div>';
             }
-
-            /* 相似案例 */
-            const similarCases = report.similarCases || [];
-            if (similarCases.length > 0) {
-                html += '<div class="similar-cases">';
-                html += '<h3 style="font-size:0.9rem;color:#555;margin-bottom:0.4rem;">相似案例</h3>';
-                for (const sc of similarCases) {
-                    html += '<div class="similar-case-item">';
-                    html += '<span class="score">相似度: ' + (sc.score * 100).toFixed(0) + '%</span>';
-                    html += ' — 案例 #' + escapeHtml(String(sc.listingId));
-                    if (sc.reason) {
-                        html += ' <span class="reason">(' + escapeHtml(sc.reason) + ')</span>';
-                    }
-                    html += '</div>';
-                }
-                html += '</div>';
-            }
-
-            return html;
         }
 
-        function showError(msg) {
-            reportSection.classList.remove('hidden');
-            reportDiv.innerHTML = '<span class="error">错误: ' + escapeHtml(msg) + '</span>';
-        }
+        return html;
+    }
 
-        function escapeHtml(s) {
-            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        }
-    </script>
+    function showError(msg) {
+        reportSection.classList.remove('hidden');
+        reportDiv.innerHTML = '<span class="error">错误: ' + escapeHtml(msg) + '</span>';
+    }
+
+    function escapeHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+</script>
 </body>
 </html>

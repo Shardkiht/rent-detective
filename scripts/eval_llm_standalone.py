@@ -21,7 +21,7 @@ if not API_KEY:
 MODEL = "deepseek-ai/DeepSeek-V3.1-Terminus"
 
 RESOURCE_DIR = Path(__file__).parent.parent / "src" / "main" / "resources"
-EVAL_CSV = RESOURCE_DIR / "评测集_24条.csv"
+EVAL_CSV = RESOURCE_DIR / "eval" / "评测集_24条.csv"
 
 # ==================== Prompt ====================
 # 使用 %s 占位符避免花括号冲突

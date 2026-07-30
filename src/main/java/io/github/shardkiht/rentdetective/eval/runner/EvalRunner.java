@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 public class EvalRunner {
 
     private static final Logger log = LoggerFactory.getLogger(EvalRunner.class);
-    private static final String DEFAULT_CSV_PATH = "杭州租房_104条_评测终版.csv";
+    private static final String DEFAULT_CSV_PATH = "eval/杭州租房_104条_评测终版.csv";
 
     private final RuleEngine ruleEngine;
     private final PriceExtractor priceExtractor;
