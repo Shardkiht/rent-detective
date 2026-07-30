@@ -47,8 +47,7 @@ public class InvestigationService {
                                 Message.system("把下面的调查结论压缩成一句话（不超过50字），只说结论和最关键的一个理由，不要复述细节。"),
                                 Message.user(finalAnswer)
                         ),
-                        null,
-                        0.3
+                        null
                 ));
                 if (response != null && response.content() != null && !response.content().isBlank()) {
                     summary = response.content();

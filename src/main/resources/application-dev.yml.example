@@ -27,6 +27,7 @@ rentdetective:
       base-url: http://localhost:11434
       model: qwen3:1.7b
       embedding-model: bge-m3
+      temperature: 0.0
     openai-compatible:
       base-url: https://api.siliconflow.cn/v1
       api-key: ""

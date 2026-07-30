@@ -42,9 +42,7 @@ public class OpenAiCompatibleLLMClient implements LLMClient {
         try {
             ObjectNode body = mapper.createObjectNode();
             body.put("model", model);
-            // 优先使用请求中的 temperature，否则用配置默认值
-            Double temperature = request.temperature() != null ? request.temperature() : defaultTemperature;
-            body.put("temperature", temperature);
+            body.put("temperature", defaultTemperature);
 
             // DeepSeek V4 系列：关闭思考模式，节省 token
             if (model.contains("deepseek")) {

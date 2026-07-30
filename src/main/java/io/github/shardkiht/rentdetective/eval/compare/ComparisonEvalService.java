@@ -247,7 +247,7 @@ public class ComparisonEvalService {
                 nullSafe(listing.getLocation()));
 
         ChatResponse response = llmClient.chat(
-                new ChatRequest(List.of(Message.user(prompt)), null, 0.1));
+                new ChatRequest(List.of(Message.user(prompt)), null));
 
         return parseVerdictFromLLM(response.content());
     }

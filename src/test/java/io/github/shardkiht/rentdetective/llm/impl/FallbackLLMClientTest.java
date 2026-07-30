@@ -41,7 +41,7 @@ class FallbackLLMClientTest {
     private FallbackLLMClient fallback;
 
     private ChatRequest sampleRequest() {
-        return new ChatRequest(List.of(Message.user("测试")), null, null);
+        return new ChatRequest(List.of(Message.user("测试")), null);
     }
 
     @BeforeEach

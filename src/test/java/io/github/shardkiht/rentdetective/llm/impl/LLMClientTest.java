@@ -43,8 +43,7 @@ class LLMClientTest {
                         Message.system("你是一个租房风险分析助手。"),
                         Message.user("这套房源描述有猫腻吗？位于北京朝阳区，两室一厅，月租1500元。")
                 ),
-                List.of(),
-                0.7
+                List.of()
         );
     }
 

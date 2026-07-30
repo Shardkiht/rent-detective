@@ -19,12 +19,15 @@ public class OllamaLLMClient implements LLMClient {
     private final ObjectMapper mapper = new ObjectMapper();
     private final String baseUrl;
     private final String model;
+    private final Double defaultTemperature;
 
     public OllamaLLMClient(
             @Value("${rentdetective.llm.ollama.base-url}") String baseUrl,
-            @Value("${rentdetective.llm.ollama.model}") String model) {
+            @Value("${rentdetective.llm.ollama.model}") String model,
+            @Value("${rentdetective.llm.ollama.temperature:0.0}") Double defaultTemperature) {
         this.baseUrl = baseUrl;
         this.model = model;
+        this.defaultTemperature = defaultTemperature;
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
@@ -41,7 +44,7 @@ public class OllamaLLMClient implements LLMClient {
             LlmRequestUtils.appendMessages(body, request);
             LlmRequestUtils.appendTools(body, request, mapper);
 
-            body.putObject("options").put("temperature", request.temperature());
+            body.putObject("options").put("temperature", defaultTemperature);
 
             Request httpRequest = new Request.Builder()
                     .url(baseUrl + "/api/chat")

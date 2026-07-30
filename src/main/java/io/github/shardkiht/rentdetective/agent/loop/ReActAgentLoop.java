@@ -153,7 +153,7 @@ public class ReActAgentLoop {
     // ==================== 内部辅助方法 ====================
 
     private ChatResponse callModel(List<Message> messages, List<ToolSchema> toolSchemas) {
-        return llmClient.chat(new ChatRequest(messages, toolSchemas, 0.3));
+        return llmClient.chat(new ChatRequest(messages, toolSchemas));
     }
 
     /**
