@@ -112,7 +112,6 @@ ReAct Loop 实时流式输出，展示 Agent 每一步思考与工具调用：
 |-----------|----------------------------------------------------------------------------------------------------|-------------------------------------------|
 | 语言/框架 | Java 17 + Spring Boot 3.3.2                                                                        | 主力技术栈                                |
 | 持久层    | MyBatis-Plus + MySQL                                                                               | 关系规则需要 SQL 分组查询（联系方式聚类） |
-| 缓存      | Redis                                                                                              | 评测任务进度/状态                         |
 | LLM       | 硅基流动云端（DeepSeek-V3.1-Terminus + bge-large-zh-v1.5）+ Ollama 本地备用（qwen3:1.7b + bge-m3） | 云端主力 + 本地降级（当前已禁用本地降级） |
 | HTTP      | OkHttp                                                                                             | LLM 流式调用                              |
 | 向量      | MySQL JSON 列存向量 + 应用层余弦相似度                                                             | 百级数据量，不引入专用向量数据库          |
@@ -359,7 +358,7 @@ src/main/resources/
 
 ## 快速开始
 
-前置：Java 17、MySQL、Redis、硅基流动 API Key（`api.siliconflow.cn`）
+前置：Java 17、MySQL、硅基流动 API Key（`api.siliconflow.cn`）
 
 ```bash
 # 1. 建表（listings / case_vectors / scam_rule）
