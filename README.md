@@ -1,28 +1,32 @@
-# RentDetective（租房侦探）
+# 🔍 RentDetective（租房侦探）
 
-基于 Spring Boot + 手写 ReAct Agent + RAG 的租房风险识别系统。
+### 租房风险识别系统 | Rental Scam Detection System
 
-输入一段房源文本（标题/描述/价格/联系方式），系统通过规则引擎打分 + Agent
-多工具调查（相似案例检索、价格异常检测、注入检测），输出风险判定（SAFE / SUSPICIOUS / REVIEW / INSUFFICIENT /
-NOT_LISTING）与带证据链的调查报告。
+基于 Spring Boot + 手写 ReAct Agent + RAG 的租房风险识别系统。输入房源文本，通过规则引擎打分 + Agent 多工具调查，输出带证据链的风险判定报告。
+
+![Java](https://img.shields.io/badge/Java-17-orange) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.2-green) ![MySQL](https://img.shields.io/badge/MySQL-8.0-blue) ![LLM](https://img.shields.io/badge/LLM-DeepSeek_V3-purple) ![License](https://img.shields.io/badge/License-MIT-yellow)
+
+---
+
+## 项目简介
 
 **项目主线**：豆瓣小组采集 104 条真实房源 → 人工逐条标注（AI 预标注 + 人工复核，改判率 19%）→ 从标注中归纳 17 条文本规则 →
 手写 ReAct Agent + RAG 案例库 → 规则 / 纯 LLM / Agent+RAG 三方案同场评测。
 
-### 数据迭代过程
+## 数据迭代过程
 
 ```
-V1 数据采集          V2 AI预标注          V3 人工复核          V4 规则归纳
-─────────────────→─────────────────→─────────────────→─────────────────→
-豆瓣抓取104条        AI初筛分类           人工逐条确权          从错判中提炼
-去重+清洗           safe/suspicious     改判率19%            17条文本规则
-                   12类风险标签         (20/104条推翻)       +2条关系规则
+V1 数据采集         V2 AI预标注         V3 人工复核         V4 规则归纳
+───────────────────→───────────────────→───────────────────→───────────────────→
+豆瓣抓取104条       AI初筛分类          人工逐条确权        从错判中提炼
+去重+清洗           safe/suspicious     改判率19%           17条文本规则
+                    12类风险标签        (20/104条推翻)      +2条关系规则
 
-V5 数据集切分        V6 系统构建          V7 三方案评测        V8 问题修复
-─────────────────→─────────────────→─────────────────→─────────────────→
-80案例库/24评测集    规则引擎+Agent+RAG   规则83.3%            价格工具误报
-马甲组整体切分       手写ReAct循环        Agent79.2%           Prompt不对称
-防训练集泄漏         4工具+向量检索       LLM37.5%             评测标准错位
+V5 数据集切分       V6 系统构建         V7 三方案评测       V8 问题修复
+───────────────────→───────────────────→───────────────────→───────────────────→
+80案例库/24评测集   规则引擎+Agent+RAG  规则83.3%           价格工具误报
+马甲组整体切分      手写ReAct循环       Agent79.2%          Prompt不对称
+防训练集泄漏        4工具+向量检索      LLM37.5%            评测标准错位
 ```
 
 **关键迭代节点**：
@@ -37,6 +41,8 @@ V5 数据集切分        V6 系统构建          V7 三方案评测        V8 
 
 ## 目录
 
+- [项目简介](#项目简介)
+- [数据迭代过程](#数据迭代过程)
 - [效果演示](#效果演示)
 - [三方案评测结果](#三方案评测结果)
 - [技术栈](#技术栈)
@@ -90,16 +96,12 @@ ReAct Loop 实时流式输出，展示 Agent 每一步思考与工具调用：
 | Agent+RAG | 79.2% | **86.7%**  | 62.5%           | 100.0%         | 0%         |
 | 纯 LLM    | 37.5% | 40.0%      | 25.0%           | 100.0%         | —          |
 
-**规则引擎**在确定性场景表现最好。信息缺失、非房源有明确判据（关键词 + 机械闸门），100% 识别；但 normal
-组的中介话术伪装（fake_personal、情感软广）超出文本规则覆盖范围，73.3% 是上限。
-
-**Agent+RAG**在模糊场景反超规则引擎。normal 组达到
-86.7%——它能调用相似案例检索发现"该房源与已标注中介马甲案例同号"，能调用比价工具发现"报价偏离同区中位数
-54%"，规则够不到的证据链它能现场挖出来。
-
-**纯 LLM 的 25%（insufficient 组）说明问题最大。** 信息不足的房源，纯 LLM 没有工具可查证，又倾向"给内容找结论"，8 条里 6
-条硬猜出错——这验证了"信息不足时不该乱下结论"，也是 Agent 工具链 + INSUFFICIENT 判定的设计原因。normal 组仅
-40%，大量 safe 房源被误判为 SUSPICIOUS，说明单次 LLM 缺乏"无风险证据即安全"的判定锚点。
+- **规则引擎** — 确定性场景表现最好。信息缺失、非房源有明确判据（关键词 + 机械闸门），100% 识别；
+  但 normal 组的中介话术伪装（fake_personal、情感软广）超出文本规则覆盖范围，73.3% 是上限。
+- **Agent+RAG** — 模糊场景反超规则引擎。normal 组达到 86.7%——它能调用相似案例检索发现"该房源与已标注中介马甲案例同号"，
+  能调用比价工具发现"报价偏离同区中位数 54%"，规则够不到的证据链它能现场挖出来。
+- **纯 LLM** — insufficient 组仅 25%，问题最大。信息不足的房源没有工具可查证，又倾向"给内容找结论"，8 条里 6 条硬猜出错。
+  normal 组仅 40%，大量 safe 房源被误判为 SUSPICIOUS，说明单次 LLM 缺乏"无风险证据即安全"的判定锚点。
 
 > 判定标准：normal 组严格判定（REVIEW 算错）；insufficient 组判定 INSUFFICIENT/REVIEW
 > 算对（评测"系统是否承认信息不足"）；reviewRate 独立统计不计入准确率。
@@ -116,33 +118,36 @@ ReAct Loop 实时流式输出，展示 Agent 每一步思考与工具调用：
 | HTTP      | OkHttp                                                                                             | LLM 流式调用                              |
 | 向量      | MySQL JSON 列存向量 + 应用层余弦相似度                                                             | 百级数据量，不引入专用向量数据库          |
 
-**明确不用**：Spring AI / LangChain4j（Agent 循环手写是项目核心）、Drools 等规则引擎框架（16 条规则手写 Matcher
-更直白）、Milvus/ES（数据量不匹配）。
+**明确不用**：
+
+- Spring AI / LangChain4j — Agent 循环手写是项目核心
+- Drools 等规则引擎框架 — 17 条规则手写 Matcher 更直白
+- Milvus / ES — 百级数据量不匹配
 
 ---
 
 ## 架构分层
 
 ```
-┌─────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────┐
 │ 演示层   SSE 流式单页（实时展示 Agent 调查轨迹）      │
-├─────────────────────────────────────────────┤
+├───────────────────────────────────────────────────────┤
 │ 平台层（通用骨架，无业务知识）                        │
-│  llm/     LLMClient + EmbeddingClient 抽象         │
-│           OpenAI-Compatible 云端主力 / Ollama 本地备用  │
-│  agent/   ReActAgentLoop：think-act-observe 循环   │
-│           括号计数 JSON 提取 / 工具超时兜底          │
-│           forceConclude 置信度封顶                  │
-│  rag/     CaseVectorService：向量化 + Top-K 检索   │
-│  eval/    三方案评测框架（共用 JudgeUtils）          │
-├─────────────────────────────────────────────┤
-│ 规则层   规则引擎（三步顺序）+ 16 条 Matcher     │
-│  rules/  （16 启用 + 1 条中性/禁用）             │
-│             价格提取器 + 4 个 Agent 工具         │
-│             建议生成器（证据不足时的提示）        │
-├─────────────────────────────────────────────┤
-│ 数据层   MySQL（listings / case_vectors / scam_rule）│
-└─────────────────────────────────────────────┘
+│  llm/     LLMClient + EmbeddingClient 抽象            │
+│           OpenAI-Compatible 云端主力 / Ollama 本地备用│
+│  agent/   ReActAgentLoop：think-act-observe 循环      │
+│           括号计数 JSON 提取 / 工具超时兜底           │
+│           forceConclude 置信度封顶                    │
+│  rag/     CaseVectorService：向量化 + Top-K 检索      │
+│  eval/    三方案评测框架（共用 JudgeUtils）           │
+├───────────────────────────────────────────────────────┤
+│ 规则层   规则引擎（三步顺序）+ 16 条 Matcher          │
+│  rules/  （16 启用 + 1 条中性/禁用）                  │
+│          价格提取器 + 4 个 Agent 工具                 │
+│          建议生成器（证据不足时的提示）               │
+├───────────────────────────────────────────────────────┤
+│ 数据层   MySQL（listings / case_vectors / scam_rule） │
+└───────────────────────────────────────────────────────┘
 ```
 
 依赖方向严格单向：`llm → agent → rag / rules → domain → app`。
@@ -151,8 +156,9 @@ ReAct Loop 实时流式输出，展示 Agent 每一步思考与工具调用：
 
 ## 规则体系
 
-17 条文本规则（16 启用 + 1 条中性/禁用）+ 2 条关系规则，全部从 104 条人工标注中归纳，每条规则在 `scam_rules.json`
-中配置（`data/scam_rules.json`：ruleType/weight/note/触发案例 id），改配置不改代码。
+17 条文本规则（16 启用 + 1 条中性/禁用）+ 2 条关系规则，全部从 104 条人工标注中归纳。
+
+每条规则在 `scam_rules.json` 中配置（ruleType / weight / note / 触发案例 id），改配置不改代码。
 
 ### 文本规则（按权重分档）
 
@@ -224,7 +230,7 @@ ReAct Loop 实时流式输出，展示 Agent 每一步思考与工具调用：
 system prompt（角色 + 工具列表 + 风险判断指引 + 输出协议）
     ↓
 LLM 输出 Thought → Action(工具名) → Action Input(JSON)
-    ↓ 解析（括号计数法提取 JSON，失败则把格式错误作为 Observation 拼回，给一次自我修正）
+    ↓ 解析（括号计数法提取 JSON；格式非法时追加 user 消息提醒重输，每轮循环均检查）
 执行工具（10s 超时兜底）→ Observation 拼回上下文
     ↓ 最多 8 轮（maxSteps）
 Final Answer → forceConclude 置信度封顶 → 调查报告
@@ -272,17 +278,18 @@ INSUFFICIENT_DATA。配套 prompt 约束："INSUFFICIENT_DATA 意为无法比价
 
 ### ② Prompt 不对称：只教风险信号，没教安全信号
 
-初版 prompt 列了 17 类风险信号，但一个字没教"什么算安全"，外加"结论必须基于工具证据"——而工具只能产出风险证据，没有任何工具能产出安全证据。Agent
-拿着一堆"没找到危险"的阴性结果，唯一合规出口只剩 REVIEW：8 条 safe 被推去 REVIEW/INSUFFICIENT，reviewRate 33.3%，normal 组仅
-26.7%。
+初版 prompt 列了 17 类风险信号，但一个字没教"什么算安全"，外加"结论必须基于工具证据"——而工具只能产出风险证据，没有任何工具能产出安全证据。
+
+Agent 拿着一堆"没找到危险"的阴性结果，唯一合规出口只剩 REVIEW：8 条 safe 被推去 REVIEW/INSUFFICIENT，reviewRate 33.3%，normal 组仅 26.7%。
 
 **修复**：补"安全信号"段落（细节具体/主动交代缺点/报价符行情/计费结构具体）+ "默认原则"（无风险证据本身就是 SAFE 依据，REVIEW
 仅限正负证据冲突）。修复后 reviewRate 6.7%，normal 组 80.0%，总体 45.8% → 75.0%。
 
 ### ③ 评测标准错位：题目和答案用了两把尺
 
-分组字段误用 `data_quality_flag` 列（21 条）而非 `eval_group` 列（30 条），且判定逻辑对 REVIEW 的处理不对称（suspicious
-时算对、safe 时算错），三方案数字整体失真（Agent 一度 50.96% vs 修复后真实水平 75%）。
+分组字段误用 `data_quality_flag` 列（23 条）而非 `eval_group` 列（104 条全有值），且判定逻辑对 REVIEW 的处理不对称（suspicious 时算对、safe 时算错），三方案数字整体失真。
+
+Agent 一度 50.96% vs 修复后真实水平 75%。
 
 **修复**：分组读 eval_group 列；判定逻辑抽 JudgeUtils 三方案共用；reviewRate 拆为独立指标。
 
@@ -346,7 +353,7 @@ src/main/resources/
 │   └── index.html               # 前端页面
 ├── data/                        # 业务数据
 │   ├── scam_rules.json          # 规则定义
-│   ├── case_library_vectors.json# 案例向量缓存
+│   ├── case_library_vectors.json# 历史遗留文件，源码未使用（向量实际存 MySQL）
 │   └── listings_104.json        # 房源原始数据
 └── eval/                        # 评测数据
     ├── 杭州租房_104条_评测终版.csv
@@ -358,40 +365,53 @@ src/main/resources/
 
 ## 快速开始
 
-前置：Java 17、MySQL、硅基流动 API Key（`api.siliconflow.cn`）
+### 前置条件
+
+- Java 17
+- MySQL
+- 硅基流动 API Key（`api.siliconflow.cn`）
+
+### 启动步骤
 
 ```bash
 # 1. 建表（listings / case_vectors / scam_rule）
 # 2. 导入标注数据（src/main/resources/eval/杭州租房_104条_评测终版.csv）
 # 3. 启动（首次自动向量嵌入，rag.embed-on-startup=true）
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
+```
 
-# 4. 提交房源调查（SSE 流式返回 Agent 轨迹）
+### 接口调用
+
+```bash
+# 提交房源调查（SSE 流式返回 Agent 轨迹）
 curl -N -X POST http://localhost:8080/api/investigate \
   -H "Content-Type: application/json" \
   -d '{"title":"...","description":"...","price":1500,"phone":"..."}'
 
-# 5. 三方案评测（rule / llm / agent）
+# 三方案评测（rule / llm / agent）
 curl -X POST "http://localhost:8080/api/eval/start?strategy=agent"
 curl "http://localhost:8080/api/eval/progress?strategy=agent"
 ```
 
-规则阈值：`application.yml` → `rule.threshold.suspicious: 0.6` / `rule.threshold.review: 0.4`。
+### 关键配置
 
-LLM 温度：`application-dev.yml` → `rentdetective.llm.openai-compatible.temperature: 0.0`（调用时可覆盖）。
+| 配置项 | 路径 | 默认值 |
+|---------|------|--------|
+| 规则阈值 | `application.yml` → `rule.threshold` | suspicious: 0.6 / review: 0.4 |
+| LLM 温度 | `application-dev.yml` → `rentdetective.llm.openai-compatible.temperature` | 0.0（调用时可覆盖） |
 
 ---
 
 ## 局限与后续计划
 
-**局限**
+### 局限
 
 - 评测集 24 条样本量小，单条影响 ±4.2%，对比结论以趋势为准
 - 向量相似度无法识别"内容像 safe 的话术骗局"（ID=8 错分案例）——此类伪装依赖规则判据补充
 - 56% 房源无公开价格，价格异常检测覆盖受限（INSUFFICIENT_DATA 为兜底）
 - 规则与标注均来自豆瓣单一数据源，跨平台泛化未验证
 
-**后续计划**
+### 后续计划
 
 - 规则 + Agent 协同：规则引擎粗筛（快、确定），Agent 对 REVIEW 条目深度复查
 - 扩充评测集至 50+ 条降低统计噪声
