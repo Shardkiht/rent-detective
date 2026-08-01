@@ -31,11 +31,13 @@ V5 数据集切分       V6 系统构建         V7 三方案评测       V8 问
 
 **关键迭代节点**：
 
-1. **V2→V3 标注纠偏**：AI 预标注将"身份混用""过度自证"等隐蔽模式漏判为 safe，人工复核后改判 suspicious，直接催生了 `identity_mixed` 和 `over_denial` 两条规则。
+1. **V2→V3 标注纠偏**：AI 预标注将"身份混用""过度自证"等隐蔽模式漏判为 safe，人工复核后改判 suspicious，直接催生了
+   `identity_mixed` 和 `over_denial` 两条规则。
 
 2. **V4→V6 规则驱动架构**：17 条规则不是凭空设计，而是从 104 条标注的错分案例中逆向归纳——每条规则对应一类真实错判模式，权重由错判频次决定。
 
-3. **V7→V8 评测反哺**：三方案同场评测暴露 3 个系统性问题（价格工具误报 / Prompt 不对称 / 评测标准错位），修复后 Agent 准确率从 45.8% 提升到 79.2%，reviewRate 从 33.3% 降到 0%。
+3. **V7→V8 评测反哺**：三方案同场评测暴露 3 个系统性问题（价格工具误报 / Prompt 不对称 / 评测标准错位），修复后 Agent 准确率从
+   45.8% 提升到 79.2%，reviewRate 从 33.3% 降到 0%。
 
 ---
 
@@ -96,8 +98,8 @@ ReAct Loop 实时流式输出，展示 Agent 每一步思考与工具调用：
 | Agent+RAG | 79.2% | **86.7%**  | 62.5%           | 100.0%         | 0%         |
 | 纯 LLM    | 37.5% | 40.0%      | 25.0%           | 100.0%         | —          |
 
-- **规则引擎** — 确定性场景表现最好。信息缺失、非房源有明确判据（关键词 + 机械闸门），100% 识别；
-  但 normal 组的中介话术伪装（fake_personal、情感软广）超出文本规则覆盖范围，73.3% 是上限。
+- **规则引擎** — 确定性场景表现最好。信息缺失、非房源有明确判据（关键词 + 机械闸门），100% 识别； 但 normal
+  组的中介话术伪装（fake_personal、情感软广）超出文本规则覆盖范围，73.3% 是上限。
 - **Agent+RAG** — 模糊场景反超规则引擎。normal 组达到 86.7%——它能调用相似案例检索发现"该房源与已标注中介马甲案例同号"，
   能调用比价工具发现"报价偏离同区中位数 54%"，规则够不到的证据链它能现场挖出来。
 - **纯 LLM** — insufficient 组仅 25%，问题最大。信息不足的房源没有工具可查证，又倾向"给内容找结论"，8 条里 6 条硬猜出错。
@@ -280,14 +282,16 @@ INSUFFICIENT_DATA。配套 prompt 约束："INSUFFICIENT_DATA 意为无法比价
 
 初版 prompt 列了 17 类风险信号，但一个字没教"什么算安全"，外加"结论必须基于工具证据"——而工具只能产出风险证据，没有任何工具能产出安全证据。
 
-Agent 拿着一堆"没找到危险"的阴性结果，唯一合规出口只剩 REVIEW：8 条 safe 被推去 REVIEW/INSUFFICIENT，reviewRate 33.3%，normal 组仅 26.7%。
+Agent 拿着一堆"没找到危险"的阴性结果，唯一合规出口只剩 REVIEW：8 条 safe 被推去 REVIEW/INSUFFICIENT，reviewRate
+33.3%，normal 组仅 26.7%。
 
 **修复**：补"安全信号"段落（细节具体/主动交代缺点/报价符行情/计费结构具体）+ "默认原则"（无风险证据本身就是 SAFE 依据，REVIEW
 仅限正负证据冲突）。修复后 reviewRate 6.7%，normal 组 80.0%，总体 45.8% → 75.0%。
 
 ### ③ 评测标准错位：题目和答案用了两把尺
 
-分组字段误用 `data_quality_flag` 列（23 条）而非 `eval_group` 列（104 条全有值），且判定逻辑对 REVIEW 的处理不对称（suspicious 时算对、safe 时算错），三方案数字整体失真。
+分组字段误用 `data_quality_flag` 列（23 条）而非 `eval_group` 列（104 条全有值），且判定逻辑对 REVIEW 的处理不对称（suspicious
+时算对、safe 时算错），三方案数字整体失真。
 
 Agent 一度 45.8% → 75.0%（温度归零后 79.2%）。
 
@@ -394,10 +398,10 @@ curl "http://localhost:8080/api/eval/progress?strategy=agent"
 
 ### 关键配置
 
-| 配置项 | 路径 | 默认值 |
-|---------|------|--------|
-| 规则阈值 | `application.yml` → `rule.threshold` | suspicious: 0.6 / review: 0.4 |
-| LLM 温度 | `application-dev.yml` → `rentdetective.llm.openai-compatible.temperature` | 0.0（调用时可覆盖） |
+| 配置项   | 路径                                                                      | 默认值                        |
+|----------|---------------------------------------------------------------------------|-------------------------------|
+| 规则阈值 | `application.yml` → `rule.threshold`                                      | suspicious: 0.6 / review: 0.4 |
+| LLM 温度 | `application-dev.yml` → `rentdetective.llm.openai-compatible.temperature` | 0.0（调用时可覆盖）           |
 
 ---
 
