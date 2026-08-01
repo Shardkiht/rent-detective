@@ -353,7 +353,6 @@ src/main/resources/
 │   └── index.html               # 前端页面
 ├── data/                        # 业务数据
 │   ├── scam_rules.json          # 规则定义
-│   ├── case_library_vectors.json# 历史遗留文件，源码未使用（向量实际存 MySQL）
 │   └── listings_104.json        # 房源原始数据
 └── eval/                        # 评测数据
     ├── 杭州租房_104条_评测终版.csv
