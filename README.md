@@ -289,7 +289,7 @@ Agent 拿着一堆"没找到危险"的阴性结果，唯一合规出口只剩 RE
 
 分组字段误用 `data_quality_flag` 列（23 条）而非 `eval_group` 列（104 条全有值），且判定逻辑对 REVIEW 的处理不对称（suspicious 时算对、safe 时算错），三方案数字整体失真。
 
-Agent 一度 50.96% vs 修复后真实水平 75%。
+Agent 一度 45.8% → 75.0%（温度归零后 79.2%）。
 
 **修复**：分组读 eval_group 列；判定逻辑抽 JudgeUtils 三方案共用；reviewRate 拆为独立指标。
 
